@@ -1,0 +1,37 @@
+version: "3.9"  # optional since v1.27.0
+services:
+#  web:
+#    build: .
+#    ports:
+#      - "8000:5000"
+#    volumes:
+#      - .:/code
+#      - logvolume01:/var/log
+#    links:
+#      - redis
+  postgres:
+    # Use postgres/disposablesecretpassword user/password credentials
+    image: postgres
+#    container_name: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: disposablesecretpassword
+    volumes:
+            - postgresavol:/var/lib/postgresql
+#      - ./postgres-data-volume:/var/lib/postgresql/data
+  adminer:
+    image: adminer
+    ports:
+      - 8085:8080
+    links:
+      - postgres:db
+#
+#  zipkin:
+#    # ps: slim zipkin doesn't support messaging transports like Kafka or RabbitMQ
+#    image: openzipkin/zipkin-slim
+#    ports:
+#      - 9411:9411
+
+volumes:
+  postgresavol: {}
