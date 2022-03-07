@@ -1,16 +1,17 @@
 package com.example.controller;
 
+import com.example.business.api.IBalanceService;
 import com.example.exception.handler.GlobalControllerExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
@@ -22,9 +23,13 @@ class BalanceControllerTest {
 //    @Autowired
     private MockMvc mockMvc;
 
+
+
     @BeforeEach
     void setup() {
-        this.mockMvc = MockMvcBuilders.standaloneSetup(new BalanceController())
+        final var iBalanceService = Mockito.mock(IBalanceService.class);
+
+        this.mockMvc = MockMvcBuilders.standaloneSetup(new BalanceController(iBalanceService))
                 .setControllerAdvice(new GlobalControllerExceptionHandler())
                 .build();
     }
