@@ -1,0 +1,1 @@
+curl -X POST -H 'Content-Type: application/json' --data "{\"amount\": $2}" localhost:$1/balance
