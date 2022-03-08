@@ -39,7 +39,7 @@ public class BalanceService implements IBalanceService {
     }
 
     @Override
-    @Transactional(timeout = 3000) // timeout in ms
+    @Transactional(timeout = 5000) // timeout in ms
     public BigDecimal updateBalanceBy(BigDecimal amount) {
         final var balanceAmountForUpdate = validBalance(balanceRepository.getBalanceForUpdate(Pageable.ofSize(1)));
         if (amount.signum() == -1 && amount.abs().compareTo(balanceAmountForUpdate.getAmount()) > 0) {

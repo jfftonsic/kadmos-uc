@@ -34,14 +34,6 @@ public class BalanceController {
     @PostMapping("/balance")
     public BalanceResponse updateBalanceBy(@Valid @RequestBody UpdateBalanceRequest req) {
 
-//
-//        final var reqAmount = req.amount();
-//        if (reqAmount.signum() == -1 && reqAmount.abs().compareTo(balance) > 0) {
-//            throw new NotEnoughBalanceHttpException();
-//        }
-
-//        balance = balance.add(reqAmount);
-
         try {
             return new BalanceResponse(balanceService.updateBalanceBy(req.amount()));
         } catch (NotEnoughBalanceException e) {
@@ -49,8 +41,4 @@ public class BalanceController {
         }
     }
 
-
-//    public Greeting greeting(@RequestParam(value = "name", defaultValue = "World") String name) {
-//        return new Greeting(counter.incrementAndGet(), String.format(template, name));
-//    }
 }
