@@ -10,4 +10,5 @@ pluginManagement {
 
 rootProject.name = "kadmos-uc"
 include("savings-a")
+include("savings-b")
 include("api-gateway")

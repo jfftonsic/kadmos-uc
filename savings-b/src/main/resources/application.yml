@@ -1,7 +1,10 @@
 server:
-  port: 8081
+  port: 8082
 spring:
+#  config:
+#    import: "optional:consul:"
   jpa:
+#    show-sql: true
     generate-ddl: false
     open-in-view: false
 
@@ -13,7 +16,7 @@ spring:
         format_sql: true
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/
+    url: jdbc:postgresql://localhost:5433/
     username: postgres
     password: a
 
