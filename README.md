@@ -9,6 +9,28 @@
 
 ## Building and running the complete environment on docker
 
+<details>
+  <summary>click to toggle expand</summary>
+
+Preparing the images:
+```shell
+./gradlew bootBuildImage
+```
+
+Starting the complete environment:
+```shell
+cd docker/complete-env
+docker compose -p temp up
+```
+
+To read the access logs from api gateway:
+```shell
+docker exec -it temp-api-gateway-1 bash
+cat /workspace/access_log.log
+```
+
+</details>
+
 ## Running the apps through gradle and the databases on docker
 
 <details>
@@ -27,6 +49,8 @@ Then you choose to
   * `./gradlew savings-a::bootRun`
   * `./gradlew savings-b::bootRun`
   * `./gradlew api-gateway::bootRun -PjvmArgs="-Dreactor.netty.http.server.accessLogEnabled=true"`
+
+The API Gateway **access logs** will be located on the root folder of the api-gateway module.
 
 </details>
 
@@ -75,16 +99,51 @@ At folder `scripts/`
 
 # Extra questions
 ## How would you test the timeouts?
+
+1. at integration testing
+   1. Using `org.testcontainers:mockserver` and `org.mock-server:mockserver-client-java` to start a fake backend service
+   and setup delays for the responses. Then customize the spring test context to use the fake server.
+2. at any environment, even production
+   1. If there is authentication and authorization, you can configure roles for using test features. Apply that role
+   to the access that the team creates for testing. Call the api gateway with authentication and pass extra header
+   params that specify a test scenario that you want to force on that environment for your request.
+   2. Or you can also use the configuration management tool (Consul, etc.) to specify a scenario you want to force, but
+   then you probably should also use a way to identify and filter your test request.
+
 ## How to scale the API Gateway?
 * If you are not using a cloud environment
   * You are going to need a dns server returning IPs pointing to multiple HAProxies, these proxies 
   will be the entry point for the requests incoming from public internet. 
     * this provides client side fail-over
-  * Those HAProxies will load balance to multiple instances of the spring cloud gateway application.
+  * Those HAProxies will load balance to the entry-points associated to your api-gateway's set of instances on a service 
+  orchestrator 
+* If you are using cloud environment
+  * You can configure your cloud environment's DNS service to point to your CDN/Edge which you'll point to your 
+  orchestrator's Load Balancers.
 
 ## How to monitor uptime, so you can sleep at night?
 
-# Improvements
+There is a wealth of observability tools to use. For uptime monitoring you can use a tool such as Prometheus and expose
+metrics and heal-check endpoints on your services. Log analysis tools such as Splunk or ELK are able to monitor log
+messages and generate alerts. Those are all capable of dashboard creation.
+
+Distributed tracing tools, e.g. Zipkin, facilitates to pinpoint problems if your interconnected services count is bigger
+than a few nodes.
+
+Tools like New Relic or Dynatrace add a long list of observability characteristics that can be used to detect and alert
+about problems, but are neither open-source nor free.
+
+It would be wise to use service orchestrators (e.g. Kubernetes, Marathon) to take care of eventually failing instances.
+
+# Next Steps / Improvements
+
+1. All the unit and integration testing
+2. Add authentication and authorization (e.g. spring boot security, spring cloud vault, Hashicorp's Vault)
+3. Usage of configuration management (e.g. Consul)
+4. Usage of distributed tracing (e.g. Zipkin)
+5. Usage of orchestration framework (e.g. Kubernetes)
+6. Monitoring (e.g. spring boot actuators, ELK, Prometheus)
+
 
 # Exercise Definition
 <details>

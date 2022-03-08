@@ -71,6 +71,8 @@ tasks.getByName<BootBuildImage>("bootBuildImage") {
         }
     }
 
+    imageName = project.name
+
 //  // example of configuring the JVM version used by the Paketo Java buildpacks at build time
 //  environment = mapOf("BP_JVM_VERSION" to "8.*")
 //
@@ -81,7 +83,7 @@ tasks.getByName<BootBuildImage>("bootBuildImage") {
 //	)
 //
 //  // giving a custom image name
-//  imageName = "example.com/library/${project.name}"
+
 //
 //  // publishing an image example
 //	isPublish = true

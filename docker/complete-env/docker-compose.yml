@@ -1,0 +1,63 @@
+version: "3.9"  # optional since v1.27.0
+services:
+  postgres1:
+    # Use postgres/a user/password credentials
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: a
+    volumes:
+      - postgresavol:/var/lib/postgresql
+  postgres2:
+    # Use postgres/a user/password credentials
+    image: postgres
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_PASSWORD: a
+    volumes:
+      - postgresbvol:/var/lib/postgresql
+  savings-a:
+    image: savings-a
+    depends_on: ["postgres1"]
+    environment:
+      - server.address=0.0.0.0
+      - spring.datasource.url=jdbc:postgresql://db1:5432/
+    #    entrypoint: ["./wait-for-it.sh","localhost:5432","--","/cnb/process/web"]
+    ports:
+      - 8081:8081
+    links:
+      - postgres1:db1
+  savings-b:
+    image: savings-b
+    depends_on: ["postgres2"]
+#    entrypoint: ["./wait-for-it.sh","localhost:5433","--","/cnb/process/web"]
+    environment:
+      - server.address=0.0.0.0
+      - spring.datasource.url=jdbc:postgresql://db2:5432/
+    ports:
+      - 8082:8082
+    links:
+      - postgres2:db2
+  api-gateway:
+    image: api-gateway
+    ports:
+      - 8080:8080
+    environment:
+      - savingsA=http://savings-a:8081
+      - savingsB=http://savings-b:8082
+    links:
+      - savings-a
+      - savings-b
+  adminer:
+    image: adminer
+    ports:
+      - 8085:8080
+    links:
+      - postgres1:db1
+      - postgres2:db2
+
+volumes:
+  postgresavol: { }
+  postgresbvol: { }
