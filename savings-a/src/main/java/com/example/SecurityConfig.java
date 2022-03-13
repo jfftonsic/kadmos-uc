@@ -10,20 +10,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    //    @Override
-    //    protected void configure(HttpSecurity http) throws Exception {
-    //        http
-    //                .authorizeRequests()
-    //                .anyRequest()
-    //                .anonymous();
-    ////                .and()
-    ////                .csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
-    //    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/swagger-ui*/**", "/v3/api-docs/**")
+        http
+                .authorizeRequests()
+                .antMatchers("/swagger-ui/**", "/v3/api-docs/**")
                 .permitAll()
                 .mvcMatchers("/balance/admin/**")
                 .hasAnyAuthority("ADMIN")
