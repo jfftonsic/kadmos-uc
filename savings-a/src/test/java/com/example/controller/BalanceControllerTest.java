@@ -20,10 +20,8 @@ import java.nio.charset.StandardCharsets;
 //@AutoConfigureMockMvc
 class BalanceControllerTest {
 
-//    @Autowired
+    //    @Autowired
     private MockMvc mockMvc;
-
-
 
     @BeforeEach
     void setup() {

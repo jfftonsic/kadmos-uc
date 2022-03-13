@@ -39,7 +39,7 @@ public class Main {
                                 gatewayFilterSpec
                                         .stripPrefix(propertiesConfiguration.getSavingsAGatewayStripPrefix())
                                         .circuitBreaker(config -> config
-                                                        .setName(CB_SAVINGS)
+                                                .setName(CB_SAVINGS)
                                         )
                         )
                         .uri(propertiesConfiguration.getSavingsA())
@@ -59,13 +59,12 @@ public class Main {
                         .host("*.circuitbreaker.com")
                         .filters(f -> f
                                 .circuitBreaker(config -> config
-                                                .setName(CB_SAVINGS)
+                                        .setName(CB_SAVINGS)
                                 )
                         )
                         .uri(propertiesConfiguration.getHttpbin()))
                 .build();
     }
-
 
     @Bean
     public ReactiveResilience4JCircuitBreakerFactory reactiveResilience4JCircuitBreakerFactory(
@@ -78,15 +77,15 @@ public class Main {
                 timeLimiterRegistry);
         factory.configure(
                 builder ->
-                    builder
-                            .timeLimiterConfig(
-                                    TimeLimiterConfig.custom()
-                                            .timeoutDuration(
-                                                    Duration.ofSeconds(
-                                                            propertiesConfiguration.getSavingsTimeoutSeconds()
-                                                    )
-                                            ).build()
-                            )
+                        builder
+                                .timeLimiterConfig(
+                                        TimeLimiterConfig.custom()
+                                                .timeoutDuration(
+                                                        Duration.ofSeconds(
+                                                                propertiesConfiguration.getSavingsTimeoutSeconds()
+                                                        )
+                                                ).build()
+                                )
                 ,
                 CB_SAVINGS
 

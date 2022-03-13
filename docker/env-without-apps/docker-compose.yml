@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_PASSWORD: a
     volumes:
-            - postgresavol:/var/lib/postgresql
+      - postgresavol:/var/lib/postgresql
   postgres2:
     # Use postgres/a user/password credentials
     image: postgres
@@ -18,6 +18,15 @@ services:
       POSTGRES_PASSWORD: a
     volumes:
       - postgresbvol:/var/lib/postgresql
+  postgres-transference:
+    # Use postgres/a user/password credentials
+    image: postgres
+    ports:
+      - 5434:5432
+    environment:
+      POSTGRES_PASSWORD: a
+    volumes:
+      - postgres-transference-vol:/var/lib/postgresql
   adminer:
     image: adminer
     ports:
@@ -25,6 +34,7 @@ services:
     links:
       - postgres1:db1
       - postgres2:db2
+      - postgres-transference:db3
 #
 #  zipkin:
 #    # ps: slim zipkin doesn't support messaging transports like Kafka or RabbitMQ
@@ -33,5 +43,6 @@ services:
 #      - 9411:9411
 
 volumes:
-  postgresavol: {}
-  postgresbvol: {}
+  postgresavol: { }
+  postgresbvol: { }
+  postgres-transference-vol: { }

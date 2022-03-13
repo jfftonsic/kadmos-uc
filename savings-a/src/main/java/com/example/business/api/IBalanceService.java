@@ -7,4 +7,6 @@ public interface IBalanceService {
     BigDecimal fetchAmount();
 
     BigDecimal updateBalanceBy(BigDecimal amount);
+
+    void addFunds(BigDecimal amount);
 }

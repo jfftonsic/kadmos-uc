@@ -17,10 +17,126 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
+                  name: total_amount
+                  type: numeric
+                  constraints:
+                    nullable: false
+              - column:
+                  name: on_hold_amount
+                  type: numeric
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: balance_update_reservation
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: idem_code
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: idem_actor
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reservation_code
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: unique_reservation_code
+              - column:
+                  name: status
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: request_timestamp
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
                   name: amount
                   type: numeric
                   constraints:
                     nullable: false
+        #        - addUniqueConstraint:
+        #            tableName: balance_update_reservation
+        #            columnNames: idem_code, idem_actor
+        #            constraintName: bur_unique_idem
+        #            deferrable: true
+        - createIndex:
+            clustered: false
+            columns:
+              - column:
+                  name: idem_actor
+              - column:
+                  name: idem_code
+            indexName: idx_bur_idem
+            schemaName: public
+            tableName: balance_update_reservation
+            unique: true
+        - createTable:
+            tableName: balance_update_confirm
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: request_timestamp
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance_update_reservation_id
+                  type: UUID
+                  constraints:
+                    references: balance_update_reservation(id)
+                    foreignKeyName: fk_buc_bur_id
+                    nullable: false
+              - column:
+                  name: done
+                  type: boolean
+                  constraints:
+                    nullable: false
+                    defaultValueBoolean: false
+        - createTable:
+            tableName: balance_update_undo
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: request_timestamp
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance_update_reservation_id
+                  type: UUID
+                  constraints:
+                    references: balance_update_reservation(id)
+                    foreignKeyName: fk_buu_bur_id
+                    nullable: false
+              - column:
+                  name: done
+                  type: boolean
+                  constraints:
+                    nullable: false
+                    defaultValueBoolean: false
 
   - changeSet:
       id: "77635dd5-7aea-43bb-bcb1-0cf6ed10c815"
@@ -32,6 +148,10 @@ databaseChangeLog:
                   name: id
                   value: f04d9096-fb26-415c-a868-a956569262a6
               - column:
-                  name: amount
+                  name: total_amount
+                  value: 0.0
+              - column:
+                  name: on_hold_amount
                   value: 0.0
             tableName: balance
+

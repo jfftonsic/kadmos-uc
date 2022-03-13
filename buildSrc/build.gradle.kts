@@ -6,9 +6,10 @@ plugins {
 }
 
 repositories {
+    mavenLocal()
     gradlePluginPortal() // so that external plugins can be resolved in dependencies section
-    maven ( "https://repo.spring.io/milestone" )
-    maven ( "https://repo.spring.io/snapshot" )
+    maven("https://repo.spring.io/milestone")
+    maven("https://repo.spring.io/snapshot")
     mavenCentral()
 }
 

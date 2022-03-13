@@ -42,12 +42,19 @@ public class BalanceService implements IBalanceService {
     @Transactional(timeout = 5000) // timeout in ms
     public BigDecimal updateBalanceBy(BigDecimal amount) {
         final var balanceAmountForUpdate = validBalance(balanceRepository.getBalanceForUpdate(Pageable.ofSize(1)));
-        if (amount.signum() == -1 && amount.abs().compareTo(balanceAmountForUpdate.getAmount()) > 0) {
+        if (amount.signum() == -1 && amount.abs().compareTo(balanceAmountForUpdate.getTotalAmount()) > 0) {
             throw new NotEnoughBalanceException();
         }
 
-        balanceAmountForUpdate.setAmount(balanceAmountForUpdate.getAmount().add(amount));
+        balanceAmountForUpdate.setTotalAmount(balanceAmountForUpdate.getTotalAmount().add(amount));
 
-        return balanceAmountForUpdate.getAmount();
+        return balanceAmountForUpdate.getTotalAmount();
+    }
+
+    @Override
+    public void addFunds(BigDecimal amount) {
+        if (balanceRepository.addFunds(amount) != 1) {
+            throw new IllegalStateException("No row was updated while adding funds.");
+        }
     }
 }

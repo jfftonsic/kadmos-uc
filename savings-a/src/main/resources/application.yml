@@ -1,5 +1,13 @@
+#debug: true
 server:
   port: 8081
+management:
+  endpoints:
+    enabled-by-default: true
+    web:
+      exposure:
+        include: '*'
+
 spring:
   jpa:
     generate-ddl: false

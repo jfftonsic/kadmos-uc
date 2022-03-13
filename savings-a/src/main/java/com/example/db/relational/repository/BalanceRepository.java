@@ -3,6 +3,7 @@ package com.example.db.relational.repository;
 import com.example.db.relational.entity.BalanceEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.transaction.annotation.Propagation;
@@ -16,7 +17,7 @@ import java.util.UUID;
 public interface BalanceRepository extends PagingAndSortingRepository<BalanceEntity, UUID> {
 
     int TIMEOUT_MS = 5000;
-    String QUERY_GET_AMOUNT = "select " + BalanceEntity.COL_AMOUNT + " from " + BalanceEntity.TABLE_NAME_BALANCE
+    String QUERY_GET_AMOUNT = "select " + BalanceEntity.COL_TOTAL_AMOUNT + " from " + BalanceEntity.TABLE_NAME_BALANCE
             + " limit 1";
 
     @Query(value = QUERY_GET_AMOUNT, nativeQuery = true)
@@ -27,4 +28,9 @@ public interface BalanceRepository extends PagingAndSortingRepository<BalanceEnt
     @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<BalanceEntity> getBalanceForUpdate(Pageable pageable);
+
+    @Modifying
+    @Query(value = "update balance set total_amount = total_amount + :amount", nativeQuery = true)
+    @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)
+    int addFunds(BigDecimal amount);
 }

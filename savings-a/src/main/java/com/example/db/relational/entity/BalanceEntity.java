@@ -23,17 +23,18 @@ public class BalanceEntity {
     public static final String TABLE_NAME_BALANCE = "balance";
     public static final String ENTITY_NAME_BALANCE = "balance";
     public static final String COL_ID = "id";
-    public static final String COL_AMOUNT = "amount";
+    public static final String COL_TOTAL_AMOUNT = "total_amount";
+    private static final String COL_ON_HOLD_AMOUNT = "on_hold_amount";
 
-    /** A primary key is required for the table. The easiest way overall for the current requirements
-     * would be to use a fixed number. I'm using UUID because it is more future-proof. We've had some
-     * problems with sequential ID's in the past.*/
     @Id
     @Column(name = COL_ID, nullable = false)
     final private UUID id = UUID.randomUUID();
 
-    @Column(name = COL_AMOUNT, nullable = false)
-    private BigDecimal amount;
+    @Column(name = COL_TOTAL_AMOUNT, nullable = false)
+    private BigDecimal totalAmount;
+
+    @Column(name = COL_ON_HOLD_AMOUNT, nullable = false)
+    private BigDecimal onHoldAmount;
 
     @Override
     public boolean equals(Object o) {

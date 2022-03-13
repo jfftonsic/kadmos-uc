@@ -1,0 +1,68 @@
+server:
+  port: 8084
+spring:
+  jpa:
+    generate-ddl: false
+    open-in-view: false
+
+    hibernate:
+      ddl-auto: none
+
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: com.example.db.relational.CustomPostgreSqlDialect
+
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/
+    username: postgres
+    password: a
+
+transference:
+  idemActor: transference-svc
+  feign:
+    config:
+      balanceAService:
+        name: feign-balance-a
+        url: http://localhost:8081
+        auth:
+          user: transference-svc
+          pass: transference-svc
+  queries:
+    transferenceCreation: '
+WITH inserted_transference AS (
+   INSERT INTO transference(id, idem_code, idem_actor, source_balance, destination_balance, amount)
+   VALUES (uuid(:transferenceId), :transferenceIdemCode, :transferenceIdemActor, :transferenceSourceBalance, 
+   :transferenceDestinationBalance, :transferenceAmount)
+    RETURNING *
+  ), inserted_debit_request AS (
+  INSERT INTO transference_debit_request(id, transference_id, req_idem_code, req_idem_actor)
+  VALUES (uuid(:transferenceDebitRequestId), (select id from inserted_transference), :transferenceDebitRequestReqIdemCode, 
+  :transferenceDebitRequestReqIdemActor)
+  RETURNING *
+  ), inserted_credit_request AS (
+  INSERT INTO transference_credit_request(id, transference_id, req_idem_code, req_idem_actor)
+  VALUES (uuid(:transferenceCreditRequestId), (select id from inserted_transference), :transferenceCreditRequestReqIdemCode, 
+  :transferenceCreditRequestReqIdemActor)
+  RETURNING *
+  ) select id from inserted_transference
+'
+
+logging:
+  level:
+    com:
+      example:
+        feign:
+          BalanceAServiceClient: DEBUG
+    org:
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql: TRACE
+      springframework:
+        transaction: TRACE
+        web:
+          filter:
+            CommonsRequestLoggingFilter: DEBUG

@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
-        maven ( "https://repo.spring.io/milestone" )
-        maven ( "https://repo.spring.io/snapshot" )
+        maven("https://repo.spring.io/milestone")
+        maven("https://repo.spring.io/snapshot")
         gradlePluginPortal()
     }
 }
@@ -10,5 +10,6 @@ pluginManagement {
 
 rootProject.name = "kadmos-uc"
 include("savings-a")
-include("savings-b")
 include("api-gateway")
+include("transference-svc")
+include("swagger-svc")

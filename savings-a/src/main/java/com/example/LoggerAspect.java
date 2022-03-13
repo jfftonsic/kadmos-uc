@@ -13,6 +13,7 @@ public class LoggerAspect {
 
     /**
      * Adds trace logging before a proceeding join point method call.
+     *
      * @param pjp The proceeding joint point
      * @return Result of method call
      */
