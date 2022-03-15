@@ -28,13 +28,23 @@ spring:
 logging:
   level:
     org:
+#      hibernate: TRACE
       hibernate:
         SQL: DEBUG
         type:
           descriptor:
             sql: TRACE
+        engine:
+          transaction:
+            internal: TRACE
+        resource:
+          jdbc:
+            internal: TRACE
       springframework:
         transaction: TRACE
+        data: TRACE
         web:
           filter:
             CommonsRequestLoggingFilter: DEBUG
+
+balanceUpdateReservation.findAndPessimisticWriteLockById: "SELECT b from balanceUpdateReservation b WHERE b.id = :id"

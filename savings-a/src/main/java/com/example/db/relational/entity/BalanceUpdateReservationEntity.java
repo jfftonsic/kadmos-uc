@@ -34,7 +34,7 @@ public class BalanceUpdateReservationEntity {
 
     @Getter
     public enum BalanceUpdateReservationStatus {
-        UNMAPPED(-1), RECEIVED(0), RESERVED(1), CONFIRMED(2), CANCELED(3);
+        UNMAPPED(-1), RECEIVED(0), RESERVED(1), CONFIRMED(2), CANCELED(3), BUSINESS_RULE_VIOLATION(4);
 
         private int dbValue;
 
@@ -47,11 +47,6 @@ public class BalanceUpdateReservationEntity {
         }
     }
 
-    /**
-     * A primary key is required for the table. The easiest way overall for the current requirements would be to use a
-     * fixed number. I'm using UUID because it is more future-proof. We've had some problems with sequential ID's in the
-     * past.
-     */
     @Id
     @Column(name = COL_ID, nullable = false)
     final private UUID id = UUID.randomUUID();
@@ -61,6 +56,9 @@ public class BalanceUpdateReservationEntity {
 
     @Column(name = COL_IDEM_ACTOR, nullable = false)
     private String idempotencyActor;
+
+    @Column(name = COL_RESERVATION_CODE, nullable = false)
+    private UUID reservationCode;
 
     @Column(name = COL_STATUS, nullable = false)
     private Integer status;
@@ -78,7 +76,7 @@ public class BalanceUpdateReservationEntity {
         if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o))
             return false;
         BalanceUpdateReservationEntity that = (BalanceUpdateReservationEntity) o;
-        return id != null && Objects.equals(id, that.id);
+        return Objects.equals(id, that.id);
     }
 
     @Override

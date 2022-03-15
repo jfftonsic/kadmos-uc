@@ -20,9 +20,7 @@ database    "Database B"    as DBB
 
 RP -> TransfMod : transfer $100 from A to B
 group Transaction
-    TransfMod -> DBT : create TRANSFERENCE
-    TransfMod -> DBT : create TRANSFERENCE_DEBIT_REQUEST
-    TransfMod -> DBT : create TRANSFERENCE_CREDIT_REQUEST
+    TransfMod -> DBT : create TRANSFERENCE\nand TRANSFERENCE_DEBIT_REQUEST\nand TRANSFERENCE_CREDIT_REQUEST
 end
 
 TransfMod -> BalAMod : POST update-reservation <font color=red>-$100</font>

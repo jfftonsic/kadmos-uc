@@ -3,7 +3,8 @@ package com.example.controller;
 import com.example.business.api.IBalanceService;
 import com.example.controller.dataobject.BalanceResponse;
 import com.example.controller.dataobject.FundsRequest;
-import com.example.controller.dataobject.UpdateBalanceRequest;
+import com.example.controller.dataobject.UpdateReservationPostRequest;
+import com.example.controller.dataobject.UpdateReservationPostResponse;
 import com.example.exception.presentation.HttpFacingBaseException;
 import com.example.exception.presentation.NotEnoughBalanceHttpException;
 import com.example.exception.service.NotEnoughBalanceException;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.time.ZonedDateTime;
 
 @RestController
 @SecurityRequirement(name = "api-security-requirement")
@@ -44,11 +46,19 @@ public class BalanceController {
         balanceService.addFunds(req.amount());
     }
 
-    @PostMapping("/balance")
-    public BalanceResponse updateBalanceBy(@Valid @RequestBody UpdateBalanceRequest req) {
+    @PostMapping("/balance/update-reservation")
+    public UpdateReservationPostResponse updateBalanceBy(@Valid @RequestBody UpdateReservationPostRequest req) {
 
         try {
-            return new BalanceResponse(balanceService.updateBalanceBy(req.amount()));
+            return new UpdateReservationPostResponse(
+                    ZonedDateTime.now(),
+                    balanceService.createUpdateReservation(
+                            req.idempotency().code(),
+                            req.idempotency().actor(),
+                            req.timestamp(),
+                            req.amount()
+                    )
+            );
         } catch (NotEnoughBalanceException e) {
             throw new NotEnoughBalanceHttpException(e);
         }
