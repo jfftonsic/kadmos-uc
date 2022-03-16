@@ -6,6 +6,7 @@ group = "com.example"
 version = "1.0.0-SNAPSHOT"
 
 val springfoxVersion by extra("3.0.0")
+val testContainersVersion by extra("1.16.3")
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -22,4 +23,9 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
+    testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
+    testImplementation("org.testcontainers:postgresql:$testContainersVersion")
+
 }

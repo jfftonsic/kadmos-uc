@@ -1,7 +1,10 @@
 databaseChangeLog:
   - preConditions:
-      - runningAs:
-          username: postgres
+      - or:
+        - runningAs:
+            username: postgres
+        - runningAs:
+            username: test
 
   - changeSet:
       id: "46d435b9-0955-48d1-a1b1-c86bf3c2034b"
