@@ -8,7 +8,7 @@ pluginManagement {
 
 
 
-rootProject.name = "kadmos-uc"
+rootProject.name = "sandbox"
 include("savings-a")
 include("api-gateway")
 include("transference-svc")

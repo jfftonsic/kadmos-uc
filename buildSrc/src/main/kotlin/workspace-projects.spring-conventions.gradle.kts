@@ -18,6 +18,14 @@ dependencies {
     annotationProcessor("org.springframework:spring-context-indexer")
 }
 
+val springFrameworkBomVersion by extra("5.3.16")
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework:spring-framework-bom:$springFrameworkBomVersion")
+    }
+}
+
 springBoot {
     buildInfo {
         properties {

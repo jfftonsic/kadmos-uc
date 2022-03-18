@@ -1,12 +1,17 @@
 plugins {
     id("workspace-projects.spring-conventions")
+    id("org.unbroken-dome.test-sets").version("4.0.0")
 }
 
 group = "com.example"
 version = "1.0.0-SNAPSHOT"
 
-val springfoxVersion by extra("3.0.0")
+//val springfoxVersion by extra("3.0.0")
 val testContainersVersion by extra("1.16.3")
+
+testSets {
+    "integrationTest"()
+}
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -22,7 +27,10 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test:5.6.2")
+
 
     testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")

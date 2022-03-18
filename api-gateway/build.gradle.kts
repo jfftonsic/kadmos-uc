@@ -6,7 +6,7 @@ plugins {
 group = "com.example"
 version = "1.0.0-SNAPSHOT"
 
-val springCloudVersion by extra("2021.0.2-SNAPSHOT")
+val springCloudVersion by extra("2021.0.1")
 
 dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-gateway")

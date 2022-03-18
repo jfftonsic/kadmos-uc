@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.math.BigDecimal;
 import java.util.LinkedList;
 
-@ActiveProfiles("test")
+@ActiveProfiles("integrationTest")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class RepositoryTest {

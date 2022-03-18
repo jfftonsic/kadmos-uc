@@ -62,7 +62,8 @@ idea {
     }
 }
 
-tasks.getByName<Test>("test") {
+tasks.withType<Test> {
+
     testLogging.showExceptions = true
     useJUnitPlatform()
 }

@@ -95,7 +95,6 @@ public class BalanceService implements IBalanceService {
         balanceUpdateReservationEntity = balanceUpdateReservationRepository.save(balanceUpdateReservationEntity);
 
         balanceUpdateReservationEntity = balanceUpdateReservationRepository.findAndPessimisticWriteLockById(balanceUpdateReservationEntity.getId()).get();
-//        entityManager.lock(balanceUpdateReservationEntity, LockModeType.PESSIMISTIC_WRITE);
 
         if (amount.signum() < 0) {
             final var balanceAmountForUpdate = validBalance(balanceRepository.getBalanceForUpdate(
@@ -119,21 +118,6 @@ public class BalanceService implements IBalanceService {
         balanceUpdateReservationEntity.setStatus(
                 BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.RESERVED.getDbValue()
         );
-
-        //        transactionHandler.runInTransaction(
-        //                Isolation.READ_COMMITTED,
-        //                Propagation.REQUIRED,
-        //                "tx-createUpdateReservation",
-        //                5,
-        //                false,
-        //                () -> {
-        //                    var balanceUpdateReservationEntity2 = balanceUpdateReservationRepository.findById(balanceUpdateReservationEntity.getId()).get();
-        //                    try {
-        //                        entityManager.lock(balanceUpdateReservationEntity2, LockModeType.PESSIMISTIC_WRITE);
-        //
-        //                    return true;
-        //                }
-        //        );
 
         return reservationCode.toString();
     }

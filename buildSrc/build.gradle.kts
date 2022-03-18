@@ -16,7 +16,7 @@ repositories {
 val javaVersion by extra(JavaVersion.VERSION_17.toString())
 val spotBugsVersion by extra("5.0.6")
 val lombokPluginVersion by extra("6.4.1")
-val springBootGradlePluginVersion by extra("2.6.5-SNAPSHOT")
+val springBootGradlePluginVersion by extra("2.6.4")
 val springDependencyManagementVersion by extra("1.0.11.RELEASE")
 
 val gradleConventionsProjectJunitVersion by extra("4.13")
