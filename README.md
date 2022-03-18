@@ -157,52 +157,10 @@ It would be wise to use service orchestrators (e.g. Kubernetes, Marathon) to tak
 
 # Next Steps / Improvements
 
-1. All the unit and integration testing
-2. Add authentication and authorization (e.g. spring boot security, spring cloud vault, Hashicorp's Vault)
-3. Usage of configuration management (e.g. Consul)
-4. Usage of distributed tracing (e.g. Zipkin)
-5. Usage of orchestration framework (e.g. Kubernetes)
-6. Monitoring (e.g. spring boot actuators, ELK, Prometheus)
+1. Unit and integration testing
+2. Authentication and authorization (e.g. spring boot security, spring cloud vault, Hashicorp's Vault)
+3. Configuration management (e.g. Consul)
+4. Distributed tracing (e.g. Zipkin)
+5. Orchestration platform (e.g. Kubernetes)
+6. Monitoring and log indexing (e.g. spring boot actuators, ELK, Prometheus)
 
-# Considerations on implementing a transference feature
-
-Let's assume the balance is located on different services using different databases. Let's ignore account holder
-information. Using only relational database and nothing else.
-
-1. inputs:
-    * idempotency_code: a client-side ID for the request.
-    * idempotency_module: the client module name. \[idempotency_code, idempotency_module\] pair is a unique key for the
-      operation and if the transference module receives multiple requests with equal pair, it will silently drop the
-      request.
-    * timestamp
-    * balance_service_source
-    * balance_service_destination
-    * amount: positive big decimal
-
-Success scenario:
-
-1. create an idempotency pair for the transference module debit request
-2. save a row with instructions to undo a debit on the source account
-3. send request to the balance service for the source account, telling to debit the amount.
-4. create an idempotency pair for the transference module credit request
-5. save a row with instructions to undo a credit on the destination account
-6. send an async request to the balance service for the destination account, telling to credit the amount.
-7. start a database transaction
-    1. fetch both rows with pessimistic lock (select for update)
-        1. if they are marked as 'created'
-            1. update the rows, flagging to not perform the undo operation. (because the transfer was successful)
-        2. else
-            1. so, during the course of this process, other process is trying to or already did undo the operation.
-    2. commit
-
-Non-trivial error scenarios:
-
-1. Timeout on sending debit request. You don't know if the operation was performed or not.
-2. Send undo operation. **remember: if you send undo requests for an operation that was not processed by the balance
-   service, nothing happens. And if you send multiple undo for an operation, no problem, it will be un-done once.**
-3. update undo row as done
-    1. if module fails in any of those steps no problem, there will be a scheduled job that will fetch rows of undo
-       operations that were not yet flagged as 'performed' and from
-
-Idempotency code is useful to prevent unintended duplicated operations. Undo operation allows for a client service
-timely abort of a previous operation. Lease would expire if left un-confirmed after expiration.
