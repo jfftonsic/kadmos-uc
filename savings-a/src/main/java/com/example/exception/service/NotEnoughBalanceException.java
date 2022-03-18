@@ -1,6 +1,6 @@
 package com.example.exception.service;
 
-public class NotEnoughBalanceException extends RuntimeException {
+public class NotEnoughBalanceException extends Exception {
     public NotEnoughBalanceException() {
     }
 }

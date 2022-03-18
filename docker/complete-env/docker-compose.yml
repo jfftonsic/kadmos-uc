@@ -20,7 +20,7 @@ services:
       - postgresbvol:/var/lib/postgresql
   savings-a:
     image: savings-a
-    depends_on: ["postgres1"]
+    depends_on: [ "postgres1" ]
     environment:
       - server.address=0.0.0.0
       - spring.datasource.url=jdbc:postgresql://db1:5432/
@@ -30,14 +30,14 @@ services:
     links:
       - postgres1:db1
   savings-b:
-    image: savings-b
-    depends_on: ["postgres2"]
-#    entrypoint: ["./wait-for-it.sh","localhost:5433","--","/cnb/process/web"]
+    image: savings-a
+    depends_on: [ "postgres2" ]
+    #    entrypoint: ["./wait-for-it.sh","localhost:5433","--","/cnb/process/web"]
     environment:
       - server.address=0.0.0.0
       - spring.datasource.url=jdbc:postgresql://db2:5432/
     ports:
-      - 8082:8082
+      - 8082:8081
     links:
       - postgres2:db2
   api-gateway:

@@ -1,0 +1,70 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+
+
+actor       "Requesting\nprocess"       as RP
+participant "Transference\nmodule" as TransfMod
+database    "Database T"    as DBT
+participant "Balance A\nmodule" as BalAMod
+database    "Database A"    as DBA
+participant "Balance B\nmodule" as BalBMod
+database    "Database B"    as DBB
+
+'boundary    Boundary    as Foo2
+'control     Control     as Foo3
+'entity      Entity      as Foo4
+'collections Collections as Foo6
+'queue       Queue       as Foo7
+
+RP -> TransfMod : transfer $100 from A to B
+group Transaction
+    TransfMod -> DBT : create TRANSFERENCE\nand TRANSFERENCE_DEBIT_REQUEST\nand TRANSFERENCE_CREDIT_REQUEST
+end
+
+TransfMod -> BalAMod : POST update-reservation <font color=red>-$100</font>
+BalAMod -> DBA : create BALANCE_UPDATE_RESERVATION\nwith status 'received'
+group Transaction
+    BalAMod -> DBA : fetch BALANCE with pessimistic lock
+    BalAMod -> BalAMod : validate that \nbalance amount - on hold amount - $100 >= 0
+    BalAMod -> DBA : update BALANCE_UPDATE_RESERVATION\nto status 'reserved'
+    BalAMod -> DBA : update BALANCE's on-hold amount
+end
+BalAMod --> TransfMod : OK\nreservationCode=uuid1
+
+TransfMod -> BalBMod : POST update-reservation <font color=green>$100</font>
+BalBMod -> DBB : create BALANCE_UPDATE_RESERVATION\nwith status 'reserved'
+BalBMod --> TransfMod : OK\nreservationCode=uuid2
+
+TransfMod -> BalAMod : PATCH update-reservation/uuid1
+BalAMod -> DBA : create BALANCE_UPDATE_CONFIRM
+group Transaction
+    BalAMod -> DBA : lock pessimistically on the\nrelated rows at the tables:\nBALANCE_UPDATE_CONFIRM\nBALANCE_UPDATE_RESERVATION\nBALANCE
+    BalAMod -> BalAMod : validate that BALANCE_UPDATE_CONFIRM.DONE is false
+    BalAMod -> DBA : issue a command like:\nWITH regional_sales AS ( UPDATE
+    BalAMod -> DBA : update BALANCE\nAMOUNT - $100\nON_HOLD + $100
+    BalAMod -> DBA : update BALANCE_UPDATE_RESERVATION\nSTATUS to 'confirmed'
+    BalAMod -> DBA : update BALANCE_UPDATE_CONFIRM.DONE to true
+end
+
+TransfMod -> BalBMod : PATCH update-reservation/uuid2
+BalBMod -> DBB : create BALANCE_UPDATE_CONFIRM
+group Transaction
+    BalBMod -> DBB : lock pessimistically on the\nrelated rows at the tables:\nBALANCE_UPDATE_CONFIRM\nBALANCE_UPDATE_RESERVATION\nBALANCE
+    BalBMod -> BalBMod : validate that BALANCE_UPDATE_CONFIRM.DONE is false
+    BalBMod -> DBB : issue a command like:\nWITH regional_sales AS ( UPDATE
+    BalBMod -> DBB : update BALANCE\nAMOUNT - $100\nON_HOLD + $100
+    BalBMod -> DBB : update BALANCE_UPDATE_RESERVATION\nSTATUS to 'confirmed'
+    BalBMod -> DBB : update BALANCE_UPDATE_CONFIRM.DONE to true
+end
+
+'TransfMod -> Foo2 : To boundary
+'TransfMod -> Foo3 : To control
+'TransfMod -> Foo4 : To entity
+'TransfMod -> DBA : To database
+'TransfMod -> Foo6 : To collections
+'TransfMod -> Foo7 : To queue
+
+@enduml
+

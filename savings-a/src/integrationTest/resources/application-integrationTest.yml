@@ -1,0 +1,28 @@
+server:
+  friendlyName: Test Server
+
+spring:
+  datasource:
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:tc:postgresql:///
+    username: postgres
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQL9Dialect
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        default-schema: public
+  test:
+    database:
+      replace: none
+
+logging:
+  level:
+    liquibase: INFO
+    org:
+      testcontainers: INFO
+    com:
+      github:
+        dockerjava: WARN

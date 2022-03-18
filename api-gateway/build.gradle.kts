@@ -1,26 +1,18 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        maven("https://repo.spring.io/milestone")
-        maven("https://repo.spring.io/snapshot")
-    }
-}
-
 plugins {
-    id("kadmos-uc.spring-conventions")
+    id("workspace-projects.spring-conventions")
 }
 
 
 group = "com.example"
 version = "1.0.0-SNAPSHOT"
 
-val springCloudVersion by extra("2021.0.2-SNAPSHOT")
+val springCloudVersion by extra("2021.0.1")
 
 dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-gateway")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j")
-    implementation("org.springframework.cloud:spring-cloud-starter-contract-stub-runner"){
-        exclude(group="org.springframework.boot", module="spring-boot-starter-web")
+    implementation("org.springframework.cloud:spring-cloud-starter-contract-stub-runner") {
+        exclude(group = "org.springframework.boot", module = "spring-boot-starter-web")
     }
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -36,7 +28,7 @@ dependencyManagement {
 
 tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootBuildImage>("bootBuildImage") {
     environment = mapOf(
-		"BPE_DELIM_JAVA_TOOL_OPTIONS" to " ",
-		"BPE_APPEND_JAVA_TOOL_OPTIONS" to "-Dreactor.netty.http.server.accessLogEnabled=true"
-	)
+        "BPE_DELIM_JAVA_TOOL_OPTIONS" to " ",
+        "BPE_APPEND_JAVA_TOOL_OPTIONS" to "-Dreactor.netty.http.server.accessLogEnabled=true"
+    )
 }

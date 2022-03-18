@@ -1,0 +1,144 @@
+databaseChangeLog:
+  - preConditions:
+      - runningAs:
+          username: postgres
+
+  - changeSet:
+      id: "46d435b9-0955-48d1-a1b1-c86bf3c2034b"
+      author: jtonsic
+      changes:
+        - createTable:
+            tableName: transference
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: idem_code
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: idem_actor
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_balance
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: destination_balance
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: numeric
+                  constraints:
+                    nullable: false
+        - createIndex:
+            clustered: false
+            columns:
+              - column:
+                  name: idem_actor
+              - column:
+                  name: idem_code
+            indexName: idx_transfer_idem
+            schemaName: public
+            tableName: transference
+            unique: true
+        - createTable:
+            tableName: transference_debit_request
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transference_id
+                  type: UUID
+                  constraints:
+                    references: transference(id)
+                    foreignKeyName: fk_tdr_transfer_id
+                    nullable: false
+                    unique: true
+              - column:
+                  name: req_idem_code
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: req_idem_actor
+                  type: character(36)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            clustered: false
+            columns:
+              - column:
+                  name: req_idem_actor
+              - column:
+                  name: req_idem_code
+            indexName: idx_tdr_idem
+            schemaName: public
+            tableName: transference_debit_request
+            unique: true
+        - createTable:
+            tableName: transference_credit_request
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transference_id
+                  type: UUID
+                  constraints:
+                    references: transference(id)
+                    foreignKeyName: fk_tcr_transfer_id
+                    nullable: false
+                    unique: true
+              - column:
+                  name: req_idem_code
+                  type: character(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: req_idem_actor
+                  type: character(36)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            clustered: false
+            columns:
+              - column:
+                  name: req_idem_actor
+              - column:
+                  name: req_idem_code
+            indexName: idx_tcr_idem
+            schemaName: public
+            tableName: transference_credit_request
+            unique: true
+#
+#  - changeSet:
+#      id: "77635dd5-7aea-43bb-bcb1-0cf6ed10c815"
+#      author: jtonsic
+#      changes:
+#        - insert:
+#            columns:
+#              - column:
+#                  name: id
+#                  value: f04d9096-fb26-415c-a868-a956569262a6
+#              - column:
+#                  name: amount
+#                  value: 0.0
+#            tableName: balance
