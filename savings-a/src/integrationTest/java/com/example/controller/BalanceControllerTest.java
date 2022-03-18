@@ -1,6 +1,15 @@
 package com.example.controller;
 
 import com.example.business.api.IBalanceService;
+import static com.example.util.MockMvcUtil.getBalanceRequestBuilder;
+import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithAdminRole;
+import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithUserRole;
+import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithoutRoles;
+import static com.example.util.MockMvcUtil.performAndExpect;
+import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilder;
+import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilderWithValidAdminUserWithoutRole;
+import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilderWithValidUserWithAdminRole;
+import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilderWithValidUserWithUserRole;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,12 +19,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import org.springframework.test.web.servlet.RequestBuilder;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,57 +55,59 @@ class BalanceControllerTest {
     IBalanceService service;
 
     @Test
-    void getBalance() throws Exception {
+    void getBalance_unauthenticated() throws Exception {
+        performAndExpect(mockMvc, getBalanceRequestBuilder(), status().isUnauthorized());
+    }
+
+    @Test
+    void postBalanceAddFunds_unauthenticated() throws Exception {
+        performAndExpect(mockMvc, postBalanceAddFundsRequestBuilder(), status().isUnauthorized());
+    }
+
+    @Test
+    void getBalance_withoutRole() throws Exception {
+        performAndExpect(mockMvc, getBalanceRequestBuilderWithValidUserWithoutRoles(), status().isForbidden());
+    }
+
+    @Test
+    void postBalanceAddFunds_withoutRole() throws Exception {
+        performAndExpect(mockMvc,
+                postBalanceAddFundsRequestBuilderWithValidAdminUserWithoutRole(),
+                status().isForbidden());
+    }
+
+    @Test
+    void postBalanceAddFunds_withInsufficientRole() throws Exception {
+        performAndExpect(mockMvc,
+                postBalanceAddFundsRequestBuilderWithValidUserWithUserRole(),
+                status().isForbidden());
+    }
+
+    @Test
+    void postBalanceAddFunds_success() throws Exception {
+        performAndExpect(mockMvc,
+                postBalanceAddFundsRequestBuilderWithValidUserWithAdminRole()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"amount\": 10.0 }"),
+                status().isOk());
+
+        Mockito.verify(service).addFunds(Mockito.argThat(argument -> argument.compareTo(BigDecimal.TEN) == 0));
+    }
+
+    void getBalance_success(RequestBuilder requestBuilder) throws Exception {
         Mockito.when(service.fetchAmount()).thenReturn(BigDecimal.ZERO);
 
-        mockMvc.perform(
-                        get("/balance")
-                                .with(csrf())
-                                .with(
-                                        SecurityMockMvcRequestPostProcessors
-                                                .user("swagger")
-                                                .authorities(new SimpleGrantedAuthority("USER"))
-                                )
-                )
-                .andDo(print())
-                .andExpect(
-                        status().isOk()
-                )
-                .andExpect(
-                        jsonPath("$.amount")
-                                .value("0")
-                );
+        performAndExpect(mockMvc, requestBuilder, status().isOk(), jsonPath("$.amount").value("0"));
     }
-    //
-    //    @Test
-    //    void updateBalanceBy_successCase() throws Exception {
-    //        this.mockMvc.perform(
-    //                        post("/balance")
-    //                                .contentType(MediaType.APPLICATION_JSON)
-    //                                .content("{ \"amount\": 100.0 }".getBytes(StandardCharsets.UTF_8))
-    //                )
-    //                .andDo(print())
-    //                .andExpect(status().isOk())
-    //                .andExpect(jsonPath("$.amount").value("100"));
-    //    }
-    //
-    //    @Test
-    //    void getBalance2() throws Exception {
-    //        this.mockMvc.perform(get("/balance")).andDo(print()).andExpect(status().isOk())
-    //                .andExpect(jsonPath("$.amount").value("0"));
-    //    }
-    //
-    //    @Test
-    //    void updateBalanceBy_negativeBalance() throws Exception {
-    //        this.mockMvc.perform(
-    //                        post("/balance")
-    //                                .contentType(MediaType.APPLICATION_JSON)
-    //                                .content("{ \"amount\": -100.0 }".getBytes(StandardCharsets.UTF_8))
-    //                )
-    //                .andDo(print())
-    //                .andExpect(status().is4xxClientError())
-    //                .andExpect(jsonPath("$.timestamp").isNotEmpty())
-    //                .andExpect(jsonPath("$.message").isNotEmpty())
-    //                .andExpect(jsonPath("$.path").value("/balance"));
-    //    }
+
+    @Test
+    void getBalance_successUserRole() throws Exception {
+        getBalance_success(getBalanceRequestBuilderWithValidUserWithUserRole());
+    }
+
+    @Test
+    void getBalance_successAdminRole() throws Exception {
+        getBalance_success(getBalanceRequestBuilderWithValidUserWithAdminRole());
+    }
+
 }

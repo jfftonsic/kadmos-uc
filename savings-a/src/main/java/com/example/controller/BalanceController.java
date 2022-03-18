@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.security.RolesAllowed;
 import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -48,7 +47,6 @@ public class BalanceController {
     public record FundsRequest(BigDecimal amount) {}
 
     @PostMapping("/balance/admin/funds")
-    @RolesAllowed("ADMIN")
     public void addFunds(@Valid @RequestBody FundsRequest req) {
         if (req.amount().signum() < 0) {
             throw new HttpFacingBaseException(HttpStatus.BAD_REQUEST, "Amount must be positive.");
