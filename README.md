@@ -1,10 +1,22 @@
-# Modules
+# Sandbox
 
-* savings-a
-* savings-b
-* api-gateway
-* buildSrc: contains templates for re-usability on gradle scripts.
+Right now, it is a sandbox for API Gateways, database and transaction manipulation, security and testing.
 
+As of march 2022 it is under heavy modification.
+
+In the beginning this was an exercise for job interviews.
+
+# Folders Summary
+
+* api-gateway: for intercommunication between service apps and external user. **currently broken, because I'm changing the other modules**
+* buildSrc: in multi-module repo, it is a way to generalize common parts of gradle build configuration.
+* docker: docker compose environments
+* documentation: extra documentation files
+* savings-a: mimics a basic balance keeping service
+* scripts: useful bash scripts (or not)
+* swagger-svc: Swagger sample with open API 3.0 and swagger UI
+* transference-svc: the initial idea is for this module to orchestrate a money transference between 2 independent savings-a instances
+ 
 # Execution
 
 ## Building and running the complete environment on docker
@@ -103,9 +115,9 @@ At folder `scripts/`
 
 </details>
 
-# Extra questions
+# Extras
 
-## How would you test the timeouts?
+## Timeout testing
 
 1. at integration testing
     1. Using `org.testcontainers:mockserver` and `org.mock-server:mockserver-client-java` to start a fake backend
@@ -117,7 +129,7 @@ At folder `scripts/`
     2. Or you can also use the configuration management tool (Consul, etc.) to specify a scenario you want to force, but
        then you probably should also use a way to identify and filter your test request.
 
-## How to scale the API Gateway?
+## Scaling the API Gateway
 
 * If you are not using a cloud environment
     * You are going to need a dns server returning IPs pointing to multiple HAProxies, these proxies will be the entry
@@ -129,7 +141,7 @@ At folder `scripts/`
     * You can configure your cloud environment's DNS service to point to your CDN/Edge which you'll point to your
       orchestrator's Load Balancers.
 
-## How to monitor uptime, so you can sleep at night?
+## Monitoring uptime
 
 There is a wealth of observability tools to use. For uptime monitoring you can use a tool such as Prometheus and expose
 metrics and heal-check endpoints on your services. Log analysis tools such as Splunk or ELK are able to monitor log
@@ -194,41 +206,3 @@ Non-trivial error scenarios:
 
 Idempotency code is useful to prevent unintended duplicated operations. Undo operation allows for a client service
 timely abort of a previous operation. Lease would expire if left un-confirmed after expiration.
-
-# Exercise Definition
-
-<details>
-  <summary><b>Things from the exercise definition</b></summary>
-
-# Requirements
-
-## API Gateway
-
-- run on port 8080
-- respond in less than 5 seconds, else throw a timeout.
-- log to file all incoming requests as info level
-
-## Savings A
-
-- run on port 8081
-- return the current balance for account A
-- increase/decrease the balance for account A
-- persist the balance in a PostgreSQL database. Feel free to define your schema.
-
-## Savings B
-
-- run on port 8082
-- return the current balance for account B
-- increase/decrease the balance for account B
-
-# Sequence Diagrams
-
-## Savings A
-
-![](documentation/image/sequence-diagram-savings-a.png "sequence diagram savings a")
-
-## Savings B
-
-![](documentation/image/sequence-diagram-savings-b.png "sequence diagram savings b")
-
-</details>
