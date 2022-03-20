@@ -1,24 +1,30 @@
 package com.example.controller;
 
+import com.example.UUIDGenerator;
 import com.example.business.api.IBalanceService;
+import com.example.util.FakeClockConfiguration;
+import static com.example.util.FakeClockConfiguration.FAKE_CLOCK;
+import static com.example.util.MockMvcUtil.VALID_USER;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilder;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithAdminRole;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithUserRole;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithoutRoles;
+import static com.example.util.MockMvcUtil.getValidUserWithUserRole;
 import static com.example.util.MockMvcUtil.performAndExpect;
 import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilder;
 import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilderWithValidAdminUserWithoutRole;
 import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilderWithValidUserWithAdminRole;
 import static com.example.util.MockMvcUtil.postBalanceAddFundsRequestBuilderWithValidUserWithUserRole;
+import static com.example.util.MockMvcUtil.postUpdateReservationRequestBuilder;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -26,33 +32,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
+import java.util.UUID;
 
 // use this when you want a more complete spring context
 //@SpringBootTest
 //@AutoConfigureMockMvc
 
-@Configuration
-class ExtraConf {
-
-    @Bean
-    @Primary
-    public Clock testClock() {
-        return Clock.fixed(Instant.EPOCH, ZoneId.of("UTC"));
-    }
-}
-
 @WebMvcTest(controllers = BalanceController.class)
-@Import(ExtraConf.class)
+@Import(FakeClockConfiguration.class)
 class BalanceControllerTest {
 
+    public static final String FAKE_TIMESTAMP = "1970-01-01T00:00:00Z";
+    public static final String FAKE_IDEM_CODE = "client-generated-code";
+    public static final double TEN_DOUBLE = 10.0;
+    public static final String FAKE_UUID_STR = "278e0f99-78a1-470c-b99e-17b7760e61f7";
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
     IBalanceService service;
+    @MockBean
+    UUIDGenerator uuidGenerator;
 
     @Test
     void getBalance_unauthenticated() throws Exception {
@@ -91,11 +93,11 @@ class BalanceControllerTest {
                         .content("{ \"amount\": 10.0 }"),
                 status().isOk());
 
-        Mockito.verify(service).addFunds(Mockito.argThat(argument -> argument.compareTo(BigDecimal.TEN) == 0));
+        verify(service).addFunds(argThat(argument -> argument.compareTo(BigDecimal.TEN) == 0));
     }
 
     void getBalance_success(RequestBuilder requestBuilder) throws Exception {
-        Mockito.when(service.fetchAmount()).thenReturn(BigDecimal.ZERO);
+        when(service.fetchAmount()).thenReturn(BigDecimal.ZERO);
 
         performAndExpect(mockMvc, requestBuilder, status().isOk(), jsonPath("$.amount").value("0"));
     }
@@ -108,6 +110,114 @@ class BalanceControllerTest {
     @Test
     void getBalance_successAdminRole() throws Exception {
         getBalance_success(getBalanceRequestBuilderWithValidUserWithAdminRole());
+    }
+
+    @Test
+    void postUpdateReservation_success() throws Exception {
+        final var amount = TEN_DOUBLE;
+        final var reservationCode = "res-code";
+        when(
+                service.createUpdateReservation(
+                        eq(FAKE_IDEM_CODE),
+                        eq(VALID_USER),
+                        eq(ZonedDateTime.now(FAKE_CLOCK)),
+                        argThat(arg -> arg.compareTo(new BigDecimal(amount)) == 0)
+                )
+        ).thenReturn(reservationCode);
+        byte[] json = """
+                {
+                    "timestamp": "%s",
+                    "idempotency": {
+                        "code": "%s"
+                    },
+                    "amount": %.1f
+                }
+                """.formatted(FAKE_TIMESTAMP, FAKE_IDEM_CODE, amount).getBytes(StandardCharsets.UTF_8);
+
+        performAndExpect(
+                mockMvc,
+                postUpdateReservationRequestBuilder()
+                        .with(getValidUserWithUserRole())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json),
+                status().isOk(),
+                jsonPath("$.timestamp").value(FAKE_TIMESTAMP),
+                jsonPath("$.updateReservation.code").value(reservationCode));
+
+    }
+
+    @Test
+    void postUpdateReservation_success_onlyRequiredFields() throws Exception {
+        final var amount = TEN_DOUBLE;
+        final var reservationCode = "res-code";
+        UUID uuid = UUID.fromString(FAKE_UUID_STR);
+        when(uuidGenerator.randomUUID()).thenReturn(uuid);
+        when(
+                service.createUpdateReservation(
+                        eq(FAKE_UUID_STR),
+                        eq(VALID_USER),
+                        eq(ZonedDateTime.now(FAKE_CLOCK)),
+                        argThat(arg -> arg.compareTo(new BigDecimal(amount)) == 0)
+                )
+        ).thenReturn(reservationCode);
+
+        byte[] json = """
+                {
+                    "amount": %.1f
+                }
+                """.formatted(amount).getBytes(StandardCharsets.UTF_8);
+
+        performAndExpect(
+                mockMvc,
+                postUpdateReservationRequestBuilder()
+                        .with(getValidUserWithUserRole())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json),
+                status().isOk(),
+                jsonPath("$.timestamp").value(FAKE_TIMESTAMP),
+                jsonPath("$.updateReservation.code").value(reservationCode));
+
+    }
+
+    @Test
+    void postUpdateReservation_idemCodeMaxSizeViolated() throws Exception {
+        byte[] json = """
+                {
+                    "timestamp": "%s",
+                    "idempotency": {
+                        "code": "%s"
+                    },
+                    "amount": %.1f
+                }
+                """.formatted(FAKE_TIMESTAMP, "123456789012345678901234567890123", TEN_DOUBLE)
+                .getBytes(StandardCharsets.UTF_8);
+
+        testForInvalidRequest(json);
+    }
+
+    @Test
+    void postUpdateReservation_noAmount() throws Exception {
+        byte[] json = """
+                {
+                    "timestamp": "%s",
+                    "idempotency": {
+                        "code": "%s"
+                    }
+                }
+                """.formatted(FAKE_TIMESTAMP, FAKE_IDEM_CODE)
+                .getBytes(StandardCharsets.UTF_8);
+
+        testForInvalidRequest(json);
+    }
+
+    private void testForInvalidRequest(byte[] json) throws Exception {
+        performAndExpect(
+                mockMvc,
+                postUpdateReservationRequestBuilder()
+                        .with(getValidUserWithUserRole())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json),
+                status().is4xxClientError());
     }
 
 }

@@ -1,7 +1,6 @@
 package com.example.business;
 
 import com.example.business.api.IBalanceService;
-import com.example.db.relational.TransactionHandler;
 import com.example.db.relational.entity.BalanceEntity;
 import com.example.db.relational.entity.BalanceUpdateReservationEntity;
 import com.example.db.relational.repository.BalanceRepository;
@@ -36,8 +35,6 @@ public class BalanceService implements IBalanceService {
 
     @PersistenceContext
     EntityManager entityManager;
-
-    TransactionHandler transactionHandler;
 
     public <T> T validBalance(List<T> amounts) {
         if (amounts.isEmpty()) {

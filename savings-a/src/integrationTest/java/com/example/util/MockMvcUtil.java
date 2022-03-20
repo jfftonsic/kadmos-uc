@@ -16,8 +16,11 @@ public class MockMvcUtil {
 
     public static final String HTTP_SEGMENT_BALANCE = "/balance";
     public static final String HTTP_SEGMENT_BALANCE_ADMIN_FUNDS = "/balance/admin/funds";
+    public static final String HTTP_SEGMENT_BALANCE_UPDATE_RESERVATION = "/balance/update-reservation";
     public static final String ROLE_ADMIN = "ADMIN";
     public static final String ROLE_USER = "USER";
+    public static final String VALID_USER = "swagger";
+    public static final String VALID_ADMIN_USER = "admin";
 
     @NotNull
     public static ResultActions performAndExpect(MockMvc mockMvc, RequestBuilder requestBuilder,
@@ -25,6 +28,11 @@ public class MockMvcUtil {
         final var resultActions = mockMvc.perform(requestBuilder).andDo(print());
         resultActions.andExpectAll(matchers);
         return resultActions;
+    }
+
+    @NotNull
+    public static MockHttpServletRequestBuilder postUpdateReservationRequestBuilder() {
+        return post(HTTP_SEGMENT_BALANCE_UPDATE_RESERVATION);
     }
 
     @NotNull
@@ -91,11 +99,11 @@ public class MockMvcUtil {
 
     @NotNull
     public static SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor getValidUser() {
-        return SecurityMockMvcRequestPostProcessors.user("swagger").password("swagger");
+        return SecurityMockMvcRequestPostProcessors.user(VALID_USER).password(VALID_USER);
     }
 
     @NotNull
     public static SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor getValidAdminUser() {
-        return SecurityMockMvcRequestPostProcessors.user("admin").password("admin");
+        return SecurityMockMvcRequestPostProcessors.user(VALID_ADMIN_USER).password(VALID_ADMIN_USER);
     }
 }
