@@ -6,14 +6,20 @@ import com.example.db.relational.entity.BalanceUpdateReservationEntity;
 import com.example.db.relational.repository.BalanceRepository;
 import com.example.db.relational.repository.BalanceUpdateReservationRepository;
 import com.example.exception.service.NotEnoughBalanceException;
+import com.example.util.GeneralConstants;
+import static com.example.util.GeneralConstants.TIMEOUT_MS;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
@@ -25,16 +31,18 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @Slf4j
 public class BalanceService implements IBalanceService {
 
-    public static final int TIMEOUT_MS = 5000;
-    BalanceRepository balanceRepository;
-    BalanceUpdateReservationRepository balanceUpdateReservationRepository;
+    final BalanceRepository balanceRepository;
+    final BalanceUpdateReservationRepository balanceUpdateReservationRepository;
+    final ApplicationContext context;
 
     @PersistenceContext
-    EntityManager entityManager;
+    final EntityManager entityManager;
+
+    BalanceService self;
 
     public <T> T validBalance(List<T> amounts) {
         if (amounts.isEmpty()) {
@@ -52,7 +60,7 @@ public class BalanceService implements IBalanceService {
     }
 
     @Override
-    @Transactional(timeout = TIMEOUT_MS)
+    @Transactional(timeout = GeneralConstants.TIMEOUT_MS)
     public BigDecimal updateBalanceBy(BigDecimal amount) throws NotEnoughBalanceException {
         final var balanceAmountForUpdate = validBalance(balanceRepository.getBalanceForUpdate(Pageable.ofSize(1)));
         if (amount.signum() == -1 && amount.abs().compareTo(balanceAmountForUpdate.getTotalAmount()) > 0) {
@@ -71,17 +79,20 @@ public class BalanceService implements IBalanceService {
         }
     }
 
-    @Override
+    @SneakyThrows
     @Transactional(
+            propagation = Propagation.REQUIRES_NEW,
             timeout = TIMEOUT_MS,
-            isolation = Isolation.READ_COMMITTED,
-            noRollbackFor = NotEnoughBalanceException.class
+            isolation = Isolation.READ_COMMITTED
     )
-    public String createUpdateReservation(String idemCode, String idemActor, ZonedDateTime requestTimestamp,
-            BigDecimal amount) throws NotEnoughBalanceException {
+    public UUID initUpdateReservation(String idemCode, String idemActor, ZonedDateTime requestTimestamp,
+            BigDecimal amount) {
 
         final var reservationCode = UUID.randomUUID();
-        BalanceUpdateReservationEntity balanceUpdateReservationEntity = BalanceUpdateReservationEntity.builder()
+
+        BalanceUpdateReservationEntity balanceUpdateReservationEntity = null;
+
+        balanceUpdateReservationEntity = BalanceUpdateReservationEntity.builder()
                 .amount(amount)
                 .reservationCode(reservationCode)
                 .idempotencyCode(idemCode)
@@ -89,21 +100,58 @@ public class BalanceService implements IBalanceService {
                 .requestTimestamp(requestTimestamp)
                 .status(BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.RECEIVED.getDbValue())
                 .build();
+
+        log.info("idemCode={} - Saving BalanceUpdateReservationEntity ...", idemCode);
         balanceUpdateReservationEntity = balanceUpdateReservationRepository.save(balanceUpdateReservationEntity);
 
-        balanceUpdateReservationEntity = balanceUpdateReservationRepository.findAndPessimisticWriteLockById(balanceUpdateReservationEntity.getId()).get();
+        return reservationCode;
+    }
+
+    @SneakyThrows
+    @Override
+    @Transactional(
+            timeout = GeneralConstants.TIMEOUT_MS,
+            isolation = Isolation.READ_COMMITTED,
+            noRollbackFor = NotEnoughBalanceException.class
+    )
+    public String createUpdateReservation(String idemCode, String idemActor, ZonedDateTime requestTimestamp,
+            BigDecimal amount) throws NotEnoughBalanceException {
+
+        final UUID reservationCode;
+        try {
+            reservationCode = getSelf().initUpdateReservation(idemCode, idemActor, requestTimestamp, amount);
+        } catch (DataIntegrityViolationException e) {
+            throw new CollidingIdempotencyException(
+                    "There already is a balance update reservation with idempotency pair (%s, %s)"
+                            .formatted(idemCode, idemActor), e);
+        }
+
+        log.info("Sleeping idemCode={}...", idemCode);
+        Thread.sleep(5000);
+
+        log.info("balanceUpdateReservationRepository.findAndPessimisticWriteLockByReservationCode idemCode={}...",
+                idemCode);
+        final var balanceUpdateReservationEntity = balanceUpdateReservationRepository.findAndPessimisticWriteLockByReservationCode(
+                reservationCode).get();
 
         if (amount.signum() < 0) {
+            log.info("balanceRepository.getBalanceForUpdate idemCode={}...", idemCode);
             final var balanceAmountForUpdate = validBalance(balanceRepository.getBalanceForUpdate(
                     Pageable.ofSize(1)));
 
             if (validateIfEnoughBalance(amount, balanceAmountForUpdate)) {
 
-                balanceAmountForUpdate.setOnHoldAmount(balanceAmountForUpdate.getOnHoldAmount()
-                        .add(amount));
+                final var newOnHoldAmount = balanceAmountForUpdate.getOnHoldAmount().add(amount);
+
+                log.info("idemCode={} replacing on-hold from {} to {} and saving balanceAmountForUpdate...",
+                        balanceAmountForUpdate.getOnHoldAmount(), newOnHoldAmount, idemCode);
+
+                balanceAmountForUpdate.setOnHoldAmount(newOnHoldAmount);
                 balanceRepository.save(balanceAmountForUpdate);
 
             } else {
+                log.info("idemCode={} BUSINESS_RULE_VIOLATION on balanceUpdateReservationEntity...", idemCode);
+
                 balanceUpdateReservationEntity.setStatus(
                         BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.BUSINESS_RULE_VIOLATION.getDbValue()
                 );
@@ -112,6 +160,7 @@ public class BalanceService implements IBalanceService {
 
         } // when it is a credit, we just need to update the reservation to reserved.
 
+        log.info("idemCode={} RESERVED on balanceUpdateReservationEntity...", idemCode);
         balanceUpdateReservationEntity.setStatus(
                 BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.RESERVED.getDbValue()
         );
@@ -126,4 +175,15 @@ public class BalanceService implements IBalanceService {
                 .signum() < 0;
     }
 
+    public BalanceService getSelf() {
+        if (self == null)
+            self = context.getBean(BalanceService.class);
+        return self;
+    }
+
+    static class CollidingIdempotencyException extends Exception {
+        public CollidingIdempotencyException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 }

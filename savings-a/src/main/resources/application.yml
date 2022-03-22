@@ -47,4 +47,4 @@ logging:
           filter:
             CommonsRequestLoggingFilter: DEBUG
 
-balanceUpdateReservation.findAndPessimisticWriteLockById: "SELECT b from balanceUpdateReservation b WHERE b.id = :id"
+balanceUpdateReservation.findAndPessimisticWriteLockByReservationCode: "SELECT b from balanceUpdateReservation b WHERE b.reservationCode = :id"
