@@ -1,9 +1,11 @@
 package com.example.business;
 
-import com.example.business.FinancialEnvironment.Account;
+import com.example.business.multithreaded.FinancialEnvironment;
+import com.example.business.multithreaded.FinancialEnvironment.Account;
 import static com.example.util.LambdaUtil.apply;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.StopWatch;
-import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ParameterContext;
@@ -27,12 +29,16 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-public class MyExtension implements InvocationInterceptor, ParameterResolver {
+@Slf4j
+public class MyExtension implements InvocationInterceptor, ParameterResolver, AfterAllCallback {
+
 
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
     public @interface MyExtensionOptions {
         int numberOfThreads();
+
+        String threadPoolDescription() default "";
 
         int numberOfAccounts();
 
@@ -50,15 +56,16 @@ public class MyExtension implements InvocationInterceptor, ParameterResolver {
     }
 
     public MyExtension() {
-//        System.out.println("MyExtension");
+        log.debug("MyExtension");
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void interceptTestMethod(
             Invocation<Void> invocation,
             ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptTestMethod");
+            ExtensionContext extensionContext) {
+        log.debug("interceptTestMethod");
 
         Arrays.stream(invocationContext.getExecutable().getDeclaredAnnotations())
                 .filter(annotation -> MyExtensionOptions.class.isAssignableFrom(annotation.annotationType()))
@@ -66,50 +73,59 @@ public class MyExtension implements InvocationInterceptor, ParameterResolver {
                 .map(annotation -> (MyExtensionOptions) annotation)
                 .ifPresentOrElse(a -> {
 
-                    final Class<? extends Invocation> aClass = invocation.getClass();
-                    final Field delegate = apply(() -> aClass.getDeclaredField("delegate"));
-                    delegate.setAccessible(true);
-                    final Invocation o = (Invocation)apply(()->delegate.get(invocation));
+                    // PS: unfortunately, junit 5 extensions `Invocation` blocks you from calling it repeatedly in this
+                    // intercept method.
+                    // There probably is a better way to do this, but this is the way I've done it.
+                    // DON'T DO THIS IN A PROFESSIONAL ENVIRONMENT!
+                    // I grab the instance of instance, which is of type ValidatingInvocation, and take the delegate
+                    // field. This will be actual MethodInvocation that we need to call multiple times, and it does not
+                    // validate if it is being called more than once.
+                    // Then I call this MethodInvocation instead of the ValidatingInvocation that was wrapping it.
 
-                    int initialTotalMoneyOnEnvironment = a.numberOfAccounts() * a.moneyInEachAccount();
+                    final Class<? extends Invocation> validatingInvocationClass = invocation.getClass();
+                    final Field methodInvocationField = apply(() -> validatingInvocationClass.getDeclaredField(
+                            "delegate"));
+                    assert methodInvocationField != null;
+                    methodInvocationField.setAccessible(true);
+                    final Invocation actualMethodInvocation = (Invocation) apply(() -> methodInvocationField.get(
+                            invocation));
+                    assert actualMethodInvocation != null;
 
                     final var executorService = Executors.newFixedThreadPool(
                             a.numberOfThreads(),
-                            new MyThreadFactory(MtTransferenceStrategy01.class.getSimpleName()));
+                            new DescribableThreadFactory(a.threadPoolDescription()));
 
                     final CyclicBarrier barrier = new CyclicBarrier(a.numberOfThreads() + 1);
                     List<Future<?>> futures = new ArrayList<>(a.numberOfThreads());
                     for (int i = 0; i < a.numberOfThreads(); i++) {
                         futures.add(
                                 executorService.submit(() -> {
-
+                                    // wait for other threads and main thread to be ready
                                     apply(barrier::await);
-                                    apply(o::proceed);
+
+                                    // call the test method
+                                    apply(actualMethodInvocation::proceed);
                                 })
                         );
                     }
 
-                    final Method markInvokedOrSkipped = apply(() -> aClass.getDeclaredMethod("markInvokedOrSkipped"));
-                    markInvokedOrSkipped.setAccessible(true);
-                    apply(()->markInvokedOrSkipped.invoke(invocation));
+                    // Then we need to set on the true ValidatingInvocation that we executed the delegated invocation
+                    // "once"...
+                    markInvoked(invocation, validatingInvocationClass);
 
                     StopWatch watch = new StopWatch();
+
+                    // wait until threads are ready
                     apply(barrier::await);
 
                     watch.start();
-                    futures.forEach(future -> {
-                        apply(future::get);
-                    });
+                    futures.forEach(future -> apply(future::get));
                     watch.stop();
-                    System.out.printf("%s %n", invocationContext.getExecutable().getName());
-                    System.out.printf("Took %d ms %n", watch.getTime(TimeUnit.MILLISECONDS));
-                    final var store = extensionContext.getStore(ExtensionContext.Namespace.GLOBAL);
-                    final FinancialEnvironment financialEnvironment = (FinancialEnvironment)store.get(FinancialEnvironment.class.getSimpleName());
-                    System.out.printf("World money before = %d and after = %d%n",
-                            initialTotalMoneyOnEnvironment,
-                            financialEnvironment.getTotalSumThreadSafe());
-                    System.out.printf("Account balances:%n%s%n",
-                            Arrays.toString(financialEnvironment.accountBalances()));
+
+                    // print some statistics and information on stdout
+                    printTestExecutionInformation(invocationContext, extensionContext, a, watch);
+
+                    executorService.shutdown();
 
                 }, () -> {
                     try {
@@ -122,12 +138,34 @@ public class MyExtension implements InvocationInterceptor, ParameterResolver {
                 });
     }
 
+    private void printTestExecutionInformation(ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext,
+            MyExtensionOptions a, StopWatch watch) {
+        System.out.printf("%s %n", invocationContext.getExecutable().getName());
+        System.out.printf("Took %d ms %n", watch.getTime(TimeUnit.MILLISECONDS));
+
+        final var store = extensionContext.getStore(ExtensionContext.Namespace.GLOBAL);
+        final FinancialEnvironment financialEnvironment = (FinancialEnvironment) store.get(
+                FinancialEnvironment.class.getSimpleName());
+
+        int initialTotalMoneyOnEnvironment = a.numberOfAccounts() * a.moneyInEachAccount();
+        System.out.printf("World money before = %d and after = %d%n",
+                initialTotalMoneyOnEnvironment,
+                financialEnvironment.getTotalSumThreadSafe());
+        System.out.printf("Account balances:%n%s%n",
+                Arrays.toString(financialEnvironment.accountBalances()));
+    }
+
+    private void markInvoked(Invocation<Void> invocation, Class<? extends Invocation> validatingInvocationClass) {
+        final Method markInvokedOrSkipped = apply(() -> validatingInvocationClass.getDeclaredMethod(
+                "markInvokedOrSkipped"));
+        assert markInvokedOrSkipped != null;
+        markInvokedOrSkipped.setAccessible(true);
+        apply(() -> markInvokedOrSkipped.invoke(invocation));
+    }
+
     @Override
     public boolean supportsParameter(ParameterContext parameterContext,
             ExtensionContext extensionContext) throws ParameterResolutionException {
-//        System.out.printf("supportsParameter %s%n",
-//                MyExtensionOptions.class.isAssignableFrom(parameterContext.getParameter().getType())
-//                        || FinancialEnvironment.class.isAssignableFrom(parameterContext.getParameter().getType()));
         return MyExtensionOptions.class.isAssignableFrom(parameterContext.getParameter().getType())
                 || FinancialEnvironment.class.isAssignableFrom(parameterContext.getParameter().getType());
     }
@@ -152,14 +190,14 @@ public class MyExtension implements InvocationInterceptor, ParameterResolver {
                 () -> parameterContext.getDeclaringExecutable()
                         .getAnnotation(MyExtensionOptions.class)
         );
-        final AccountFactory accountFactory1 = getCachedOrInitializeAndGet(store,
+
+        final var accountFactory1 = (AccountFactory<? extends Account>) getCachedOrInitializeAndGet(store,
                 AccountFactory.class,
                 () -> {
-                    final Class<? extends AccountFactory<?>> factoryClass = myExtensionOptions1.accountFactory();
-                    final Constructor<? extends AccountFactory<?>> constructor = apply(factoryClass::getConstructor);
+                    final Class<? extends AccountFactory<? extends Account>> factoryClass = myExtensionOptions1.accountFactory();
+                    final Constructor<? extends AccountFactory<? extends Account>> constructor = apply(factoryClass::getConstructor);
                     assert constructor != null;
-                    final AccountFactory<?> accountFactory = apply(constructor::newInstance);
-                    return accountFactory;
+                    return apply(constructor::newInstance);
                 }
         );
 
@@ -172,92 +210,16 @@ public class MyExtension implements InvocationInterceptor, ParameterResolver {
                                         myExtensionOptions1.moneyInEachAccount()))))
         );
 
-        // FinancialEnvironment financialEnvironment = new FinancialEnvironment(
-        //                                a.numberOfAccounts(), (idx, size) -> accountFactory.build(idx, size,
-        //                                a.moneyInEachAccount()));
-
-//        System.out.printf("resolveParameter %s %n", parameterContext.getParameter().getType());
         if (MyExtensionOptions.class.isAssignableFrom(parameterContext.getParameter().getType())) {
-            final var a = myExtensionOptions1;
-//            System.out.printf("resolved to value %s %n", a);
-            return a;
+            return myExtensionOptions1;
         } else if (FinancialEnvironment.class.isAssignableFrom(parameterContext.getParameter().getType())) {
-            final var o = financialEnvironment;
-//            System.out.printf("resolved to value %s %n", o);
-            return o;
+            return financialEnvironment;
         }
         return null;
     }
 
     @Override
-    public <T> T interceptTestClassConstructor(
-            Invocation<T> invocation,
-            ReflectiveInvocationContext<Constructor<T>> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptTestClassConstructor");
-        return InvocationInterceptor.super.interceptTestClassConstructor(invocation,
-                invocationContext,
-                extensionContext);
-    }
-
-    @Override
-    public void interceptBeforeAllMethod(
-            Invocation<Void> invocation,
-            ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptBeforeAllMethod");
-        InvocationInterceptor.super.interceptBeforeAllMethod(invocation, invocationContext, extensionContext);
-    }
-
-    @Override
-    public void interceptBeforeEachMethod(
-            Invocation<Void> invocation,
-            ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptBeforeEachMethod");
-        InvocationInterceptor.super.interceptBeforeEachMethod(invocation, invocationContext, extensionContext);
-    }
-
-    @Override
-    public <T> T interceptTestFactoryMethod(Invocation<T> invocation,
-            ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptTestFactoryMethod");
-        return InvocationInterceptor.super.interceptTestFactoryMethod(invocation, invocationContext, extensionContext);
-    }
-
-    @Override
-    public void interceptTestTemplateMethod(
-            Invocation<Void> invocation,
-            ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptTestTemplateMethod");
-        InvocationInterceptor.super.interceptTestTemplateMethod(invocation, invocationContext, extensionContext);
-    }
-
-    @Override
-    public void interceptDynamicTest(
-            Invocation<Void> invocation, DynamicTestInvocationContext invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptDynamicTest");
-        InvocationInterceptor.super.interceptDynamicTest(invocation, invocationContext, extensionContext);
-    }
-
-    @Override
-    public void interceptAfterEachMethod(
-            Invocation<Void> invocation,
-            ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptAfterEachMethod");
-        InvocationInterceptor.super.interceptAfterEachMethod(invocation, invocationContext, extensionContext);
-    }
-
-    @Override
-    public void interceptAfterAllMethod(
-            Invocation<Void> invocation,
-            ReflectiveInvocationContext<Method> invocationContext,
-            ExtensionContext extensionContext) throws Throwable {
-//        System.out.println("interceptAfterAllMethod");
-        InvocationInterceptor.super.interceptAfterAllMethod(invocation, invocationContext, extensionContext);
+    public void afterAll(ExtensionContext context) throws Exception {
+        Thread.sleep(5000);
     }
 }

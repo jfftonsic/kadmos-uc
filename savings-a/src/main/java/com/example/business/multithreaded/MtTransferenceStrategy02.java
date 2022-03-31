@@ -1,6 +1,6 @@
-package com.example.business;
+package com.example.business.multithreaded;
 
-import com.example.business.FinancialEnvironment.Account;
+import com.example.business.multithreaded.FinancialEnvironment.Account;
 
 /**
  * This strategy naively try to avoid negative balances.

@@ -1,7 +1,12 @@
-package com.example.business;
+package com.example.business.multithreaded;
 
-import com.example.business.BalanceObjects.LockableBalance;
-import com.example.business.FinancialEnvironment.Account;
+import com.example.business.multithreaded.BalanceObjects.LockableAccount;
+import com.example.business.multithreaded.BalanceObjects.LockableBalance;
+import com.example.business.multithreaded.BalanceObjects.LockableBalance2;
+import com.example.business.multithreaded.FinancialEnvironment.Account;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * This strategy try to avoid negative balances strictly.
@@ -16,19 +21,23 @@ import com.example.business.FinancialEnvironment.Account;
  */
 public class MtTransferenceStrategy04 {
 
+
+
+
     /**
      *
      */
     public long transfer(Account source,
             Account destination, long amount) {
 
-        final LockableBalance lockableSource = (LockableBalance) source;
-        final LockableBalance lockableDestination = (LockableBalance) destination;
+        final LockableAccount lockableSource = (LockableAccount) source;
+        final LockableAccount lockableDestination = (LockableAccount) destination;
 
         long sourceBalance;
         boolean debitMade = false;
 
-        final var writeLock = lockableSource.getLock().writeLock();
+        final Lock writeLock = getLock(lockableSource);
+
         writeLock.lock();
         try {
             sourceBalance = source.get();
@@ -41,7 +50,7 @@ public class MtTransferenceStrategy04 {
             writeLock.unlock();
 
             if (debitMade) {
-                final var writeLock2 = lockableDestination.getLock().writeLock();
+                final var writeLock2 = getLock(lockableDestination);
                 writeLock2.lock();
                 try {
                     destination.applyDelta(amount);
@@ -52,6 +61,19 @@ public class MtTransferenceStrategy04 {
         }
 
         return sourceBalance;
+    }
+
+    private Lock getLock(LockableAccount lockableSource) {
+        final Lock writeLock;
+        if (LockableBalance.class.isAssignableFrom(lockableSource.getClass())) {
+            var rrwl = lockableSource.getLock(ReentrantReadWriteLock.class);
+            writeLock = rrwl.writeLock();
+        } else if (LockableBalance2.class.isAssignableFrom(lockableSource.getClass())) {
+            writeLock = lockableSource.getLock(Lock.class);
+        } else {
+            throw new RuntimeException("Missing implementation");
+        }
+        return writeLock;
     }
 
 }

@@ -37,8 +37,12 @@ fun JavaForkOptions.prepareJvmArgs(): Unit {
         // jvmArgs2.addAll(listOf("-XX:+FlightRecorder"))
 //    }
 
-    if (project.hasProperty("flightRecorderFile") ) {
-        jvmArgs2.add("-XX:StartFlightRecording=filename=${project.property("flightRecorderFile").toString()}")
+    val hasPropertyFlightRecorderFile = project.hasProperty("flightRecorderFile")
+    val hasPropertyFlightRecorderTemplate = project.hasProperty("flightRecorderTemplate")
+    val flightRecorderFile = if (hasPropertyFlightRecorderFile) project.property("flightRecorderFile").toString() else ""
+    val flightRecorderTemplate = if (hasPropertyFlightRecorderTemplate) project.property("flightRecorderTemplate").toString() else ""
+    if (hasPropertyFlightRecorderFile) {
+        jvmArgs2.add("-XX:StartFlightRecording=filename=$flightRecorderFile${if (hasPropertyFlightRecorderTemplate) ",settings=$flightRecorderTemplate" else ""}")
     }
 
     if (project.hasProperty("remoteJmx")) {

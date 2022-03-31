@@ -1,6 +1,8 @@
 package com.example.business;
 
 import com.example.business.MyExtension.MyExtensionOptions;
+import com.example.business.multithreaded.FinancialEnvironment;
+import com.example.business.multithreaded.MtTransferenceStrategy04;
 import it.unimi.dsi.util.XoRoShiRo128PlusPlusRandom;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,7 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(MyExtension.class)
 class MtTransferenceStrategy04Test {
 
-    public static final int TRANSFERENCES_MADE_BY_EACH_ACCOUNT = 100000;
+    public static final int TRANSFERENCES_MADE_BY_EACH_ACCOUNT = 500_000;
     public static final int MONEY_IN_EACH_ACCOUNT = 100;
 
     final MtTransferenceStrategy04 transferenceService = new MtTransferenceStrategy04();
@@ -17,15 +19,29 @@ class MtTransferenceStrategy04Test {
 
     @Test
     @MyExtensionOptions(
-            numberOfThreads = 7,
-            numberOfAccounts = 5,
+            numberOfThreads = 4,
+            threadPoolDescription = "transfer_lockable_rw",
+            numberOfAccounts = 8,
             moneyInEachAccount = MONEY_IN_EACH_ACCOUNT,
             transferencesMadeByEachThread = TRANSFERENCES_MADE_BY_EACH_ACCOUNT,
             amountTransferred = 2,
             accountFactory = AccountFactories.AfLockable.class
     )
-    void transfer_lockable(MyExtensionOptions myExtensionOptions, FinancialEnvironment financialEnvironment)
-            throws Exception {
+    void transfer_lockable_rw(MyExtensionOptions myExtensionOptions, FinancialEnvironment financialEnvironment) {
+        doIt(myExtensionOptions, financialEnvironment, transferenceService, "transfer_lockable_rw");
+    }
+
+    @Test
+    @MyExtensionOptions(
+            numberOfThreads = 4,
+            threadPoolDescription = "transfer_lockable",
+            numberOfAccounts = 8,
+            moneyInEachAccount = MONEY_IN_EACH_ACCOUNT,
+            transferencesMadeByEachThread = TRANSFERENCES_MADE_BY_EACH_ACCOUNT,
+            amountTransferred = 2,
+            accountFactory = AccountFactories.AfLockable2.class
+    )
+    void transfer_lockable(MyExtensionOptions myExtensionOptions, FinancialEnvironment financialEnvironment) {
         doIt(myExtensionOptions, financialEnvironment, transferenceService, "transfer_lockable");
     }
 

@@ -1,6 +1,8 @@
 package com.example.business;
 
 import com.example.business.MyExtension.MyExtensionOptions;
+import com.example.business.multithreaded.FinancialEnvironment;
+import com.example.business.multithreaded.MtTransferenceStrategy03;
 import it.unimi.dsi.util.XoRoShiRo128PlusPlusRandom;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,7 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(MyExtension.class)
 class MtTransferenceStrategy03Test {
 
-    public static final int TRANSFERENCES_MADE_BY_EACH_ACCOUNT = 10000000;
+    public static final int TRANSFERENCES_MADE_BY_EACH_ACCOUNT = 10_000_000;
     public static final int MONEY_IN_EACH_ACCOUNT = 100;
 
     final MtTransferenceStrategy03 transferenceService = new MtTransferenceStrategy03();
@@ -18,6 +20,7 @@ class MtTransferenceStrategy03Test {
     @Test
     @MyExtensionOptions(
             numberOfThreads = 7,
+            threadPoolDescription = "transfer_primitive",
             numberOfAccounts = 5,
             moneyInEachAccount = MONEY_IN_EACH_ACCOUNT,
             transferencesMadeByEachThread = TRANSFERENCES_MADE_BY_EACH_ACCOUNT,
@@ -31,6 +34,7 @@ class MtTransferenceStrategy03Test {
     @Test
     @MyExtensionOptions(
             numberOfThreads = 7,
+            threadPoolDescription = "transfer_volatile",
             numberOfAccounts = 5,
             moneyInEachAccount = MONEY_IN_EACH_ACCOUNT,
             transferencesMadeByEachThread = TRANSFERENCES_MADE_BY_EACH_ACCOUNT,
@@ -46,6 +50,7 @@ class MtTransferenceStrategy03Test {
     @Test
     @MyExtensionOptions(
             numberOfThreads = 7,
+            threadPoolDescription = "transfer_atomic",
             numberOfAccounts = 5,
             moneyInEachAccount = MONEY_IN_EACH_ACCOUNT,
             transferencesMadeByEachThread = TRANSFERENCES_MADE_BY_EACH_ACCOUNT,

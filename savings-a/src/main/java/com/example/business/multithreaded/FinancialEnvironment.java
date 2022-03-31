@@ -1,4 +1,4 @@
-package com.example.business;
+package com.example.business.multithreaded;
 
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;

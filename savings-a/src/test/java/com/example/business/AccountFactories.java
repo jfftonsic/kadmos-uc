@@ -1,5 +1,7 @@
 package com.example.business;
 
+import com.example.business.multithreaded.BalanceObjects;
+
 public class AccountFactories {
     public static class Af implements MyExtension.AccountFactory<BalanceObjects.MtTransferenceStrategy01Balance> {
 
@@ -30,6 +32,14 @@ public class AccountFactories {
         @Override
         public BalanceObjects.LockableBalance build(int idx, int size, int initialBalance) {
             return new BalanceObjects.LockableBalance(initialBalance);
+        }
+    }
+
+    public static class AfLockable2 implements MyExtension.AccountFactory<BalanceObjects.LockableBalance2> {
+
+        @Override
+        public BalanceObjects.LockableBalance2 build(int idx, int size, int initialBalance) {
+            return new BalanceObjects.LockableBalance2(initialBalance);
         }
     }
 }
