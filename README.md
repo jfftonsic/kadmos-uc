@@ -6,6 +6,31 @@ As of march 2022 it is under heavy modification.
 
 In the beginning this was an exercise for job interviews.
 
+# TODO
+- [ ] Complete the savings-a service
+- [ ] Complete the transference service
+- [X] Add a class on savings-a with this [requisites](#requisites-1)
+- [ ] Update api-gateway so that it works with the changes on the other modules
+- [ ] Create unit and integration tests for api-gateway
+- [ ] Change the basic auth from everything to something that resembles more a production solution.
+- [ ] Update docker compose files
+- [ ] Create a solution that uses global locking mechanism (e.g. atomikos)
+- [ ] Create a solution that uses Saga Pattern
+- [ ] Configuration management (e.g. Consul)
+- [ ] Distributed tracing (e.g. Zipkin)
+- [ ] Orchestration platform (e.g. Kubernetes)
+- [ ] Monitoring and log indexing (e.g. spring boot actuators, ELK, Prometheus)
+- [ ] Integrate with kubernetes
+
+
+## Requisites 1
+
+* class
+  * method: transfer(BigInteger amount, balanceAccountSource, balanceAccount2Destination)
+    * take into account that the method will be accessed with high concurrency and
+    that the input instances are shared between calls.
+* test this with junit
+
 # Folders Summary
 
 * api-gateway: for intercommunication between service apps and external user. **currently broken, because I'm changing the other modules**
@@ -155,12 +180,4 @@ about problems, but are neither open-source nor free.
 
 It would be wise to use service orchestrators (e.g. Kubernetes, Marathon) to take care of eventually failing instances.
 
-# Next Steps / Improvements
-
-1. Unit and integration testing
-2. Authentication and authorization (e.g. spring boot security, spring cloud vault, Hashicorp's Vault)
-3. Configuration management (e.g. Consul)
-4. Distributed tracing (e.g. Zipkin)
-5. Orchestration platform (e.g. Kubernetes)
-6. Monitoring and log indexing (e.g. spring boot actuators, ELK, Prometheus)
 

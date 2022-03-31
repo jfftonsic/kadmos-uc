@@ -1,6 +1,6 @@
 plugins {
     id("workspace-projects.spring-conventions")
-    id("org.unbroken-dome.test-sets").version("4.0.0")
+    id("org.unbroken-dome.test-sets") version "4.0.0"
 }
 
 group = "com.example"
@@ -39,5 +39,9 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
     testImplementation("org.testcontainers:postgresql:$testContainersVersion")
+
+    // https://mvnrepository.com/artifact/it.unimi.dsi/dsiutils
+    testImplementation("it.unimi.dsi:dsiutils:2.7.0")
+
 
 }

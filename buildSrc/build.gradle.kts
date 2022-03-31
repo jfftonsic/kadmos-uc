@@ -21,11 +21,6 @@ val springDependencyManagementVersion by extra("1.0.11.RELEASE")
 
 val gradleConventionsProjectJunitVersion by extra("4.13")
 
-tasks.getByName<KotlinCompile>("compileKotlin") {
-    targetCompatibility = javaVersion
-    sourceCompatibility = javaVersion
-}
-
 dependencies {
     implementation("com.github.spotbugs.snom:spotbugs-gradle-plugin:$spotBugsVersion")
     implementation("io.freefair.gradle:lombok-plugin:$lombokPluginVersion")
@@ -39,9 +34,9 @@ dependencies {
 }
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
-    jvmTarget = "1.8"
+    jvmTarget = "17" //"1.8"
 }
 val compileTestKotlin: KotlinCompile by tasks
 compileTestKotlin.kotlinOptions {
-    jvmTarget = "1.8"
+    jvmTarget = "17" //"1.8"
 }

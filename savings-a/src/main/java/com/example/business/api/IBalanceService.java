@@ -4,12 +4,11 @@ import com.example.exception.service.NotEnoughBalanceException;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+import java.util.UUID;
 
 public interface IBalanceService {
 
     BigDecimal fetchAmount();
-
-    BigDecimal updateBalanceBy(BigDecimal amount) throws NotEnoughBalanceException;
 
     void addFunds(BigDecimal amount);
 
@@ -24,4 +23,7 @@ public interface IBalanceService {
      */
     String createUpdateReservation(String idemCode, String idemActor, ZonedDateTime requestTimestamp, BigDecimal amount)
             throws NotEnoughBalanceException;
+
+    enum ConfirmUpdateReservationResponse { NO_CHANGES, DONE, UPDATE_RESERVATION_NOT_FOUND }
+    ConfirmUpdateReservationResponse confirmUpdateReservation(UUID updateReservationCode, ZonedDateTime requestTimestamp);
 }

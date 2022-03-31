@@ -65,4 +65,5 @@ public class BalanceUpdateConfirmEntity {
                 "requestTimestamp = " + requestTimestamp + ", " +
                 "done = " + done + ")";
     }
+
 }

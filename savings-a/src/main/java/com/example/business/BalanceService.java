@@ -2,8 +2,10 @@ package com.example.business;
 
 import com.example.business.api.IBalanceService;
 import com.example.db.relational.entity.BalanceEntity;
+import com.example.db.relational.entity.BalanceUpdateConfirmEntity;
 import com.example.db.relational.entity.BalanceUpdateReservationEntity;
 import com.example.db.relational.repository.BalanceRepository;
+import com.example.db.relational.repository.BalanceUpdateConfirmRepository;
 import com.example.db.relational.repository.BalanceUpdateReservationRepository;
 import com.example.exception.service.NotEnoughBalanceException;
 import com.example.util.GeneralConstants;
@@ -27,6 +29,7 @@ import javax.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -35,10 +38,13 @@ import java.util.UUID;
 @Slf4j
 public class BalanceService implements IBalanceService {
 
-    final BalanceRepository balanceRepository;
-    final BalanceUpdateReservationRepository balanceUpdateReservationRepository;
     final ApplicationContext context;
 
+    final BalanceRepository balanceRepository;
+    final BalanceUpdateReservationRepository balanceUpdateReservationRepository;
+    final BalanceUpdateConfirmRepository balanceUpdateConfirmRepository;
+
+    //
     @PersistenceContext
     final EntityManager entityManager;
 
@@ -57,19 +63,6 @@ public class BalanceService implements IBalanceService {
     @Override
     public BigDecimal fetchAmount() {
         return validBalance(balanceRepository.getBalanceAmount());
-    }
-
-    @Override
-    @Transactional(timeout = GeneralConstants.TIMEOUT_MS)
-    public BigDecimal updateBalanceBy(BigDecimal amount) throws NotEnoughBalanceException {
-        final var balanceAmountForUpdate = validBalance(balanceRepository.getBalanceForUpdate(Pageable.ofSize(1)));
-        if (amount.signum() == -1 && amount.abs().compareTo(balanceAmountForUpdate.getTotalAmount()) > 0) {
-            throw new NotEnoughBalanceException();
-        }
-
-        balanceAmountForUpdate.setTotalAmount(balanceAmountForUpdate.getTotalAmount().add(amount));
-
-        return balanceAmountForUpdate.getTotalAmount();
     }
 
     @Override
@@ -166,6 +159,68 @@ public class BalanceService implements IBalanceService {
         );
 
         return reservationCode.toString();
+    }
+
+    @Transactional(
+            propagation = Propagation.REQUIRES_NEW,
+            isolation = Isolation.READ_COMMITTED,
+            timeout = GeneralConstants.TIMEOUT_MS
+    )
+    public void initConfirmationOnDb(BalanceUpdateReservationEntity updateReservation, ZonedDateTime requestTimestamp) {
+        final BalanceUpdateConfirmEntity confirmation = BalanceUpdateConfirmEntity.builder()
+                .balanceUpdateReservationEntity(updateReservation)
+                .requestTimestamp(requestTimestamp)
+                .done(false)
+                .build();
+        balanceUpdateConfirmRepository.save(confirmation);
+    }
+
+    @Transactional(
+            propagation = Propagation.REQUIRED,
+            isolation = Isolation.READ_COMMITTED,
+            timeout = GeneralConstants.TIMEOUT_MS
+    )
+    @Override
+    public ConfirmUpdateReservationResponse confirmUpdateReservation(UUID updateReservationCode,
+            ZonedDateTime requestTimestamp) {
+
+        final var updateReservationOpt = balanceUpdateReservationRepository.findAndPessimisticWriteLockByReservationCode(
+                updateReservationCode);
+        if (updateReservationOpt.isPresent()) {
+            final var updateReservation = updateReservationOpt.get();
+
+            try {
+                getSelf().initConfirmationOnDb(updateReservation, requestTimestamp);
+            } catch (DataIntegrityViolationException e) {
+                // there already is a confirmation record on the database
+                // if it is not completed yet, we may try to complete
+                // if it is already completed, we can just return a "no change" response
+                log.warn("Duplicated init of update reservation confirmation for updateReservationCode={}",
+                        updateReservationCode);
+            }
+
+            final Optional<BalanceUpdateConfirmEntity> updateConfirmOpt = balanceUpdateConfirmRepository.findByBalanceUpdateReservationEntityId(
+                    updateReservation.getId());
+            if (updateConfirmOpt.isEmpty()) {
+                throw new RuntimeException(
+                        "The update reservation confirmation was not found after its supposed creation. updateReservationCode=%s".formatted(
+                                updateReservationCode));
+            }
+            final var updateConfirm = updateConfirmOpt.get();
+
+            if (updateConfirm.getDone())
+                return ConfirmUpdateReservationResponse.NO_CHANGES;
+
+            if (updateReservation.getAmount().signum() < 0) {
+                final var balanceForUpdate = balanceRepository.getBalanceForUpdate(Pageable.ofSize(1));
+                final var balanceEntity = balanceForUpdate.get(0);
+                balanceEntity.setOnHoldAmount(balanceEntity.getOnHoldAmount().add(updateReservation.getAmount()));
+                balanceEntity.setTotalAmount(balanceEntity.getTotalAmount().add(updateReservation.getAmount()));
+            }
+            updateReservation.setStatus(BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.CONFIRMED.getDbValue());
+            updateConfirm.setDone(true);
+        }
+        return ConfirmUpdateReservationResponse.DONE;
     }
 
     private boolean validateIfEnoughBalance(BigDecimal amount, BalanceEntity balanceAmountForUpdate) {

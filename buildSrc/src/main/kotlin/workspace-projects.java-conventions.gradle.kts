@@ -25,9 +25,51 @@ tasks.getByName<JavaCompile>("compileJava") {
     targetCompatibility = javaVersion
 }
 
+fun JavaForkOptions.prepareJvmArgs(): Unit {
+
+    val jvmArgs2 = if (project.hasProperty("jvmArgs"))
+        project.property("jvmArgs").toString().split("\\s+".toRegex()).toMutableList()
+    else emptyList<String>().toMutableList()
+
+    // using graalvm this was not needed
+//    if (project.hasProperty("flightRecorder") && project.property("flightRecorder").toString().toBoolean()) {
+        // the following does not exist in graalvm: -XX:+UnlockCommercialFeatures
+        // jvmArgs2.addAll(listOf("-XX:+FlightRecorder"))
+//    }
+
+    if (project.hasProperty("flightRecorderFile") ) {
+        jvmArgs2.add("-XX:StartFlightRecording=filename=${project.property("flightRecorderFile").toString()}")
+    }
+
+    if (project.hasProperty("remoteJmx")) {
+        val remoteJmxPort = project.property("remoteJmx").toString().trim()
+        jvmArgs2.addAll(
+            listOf(
+                "-Dcom.sun.management.jmxremote=true",
+                "-Dcom.sun.management.jmxremote.port=$remoteJmxPort",
+                "-Dcom.sun.management.jmxremote.authenticate=false",
+                "-Dcom.sun.management.jmxremote.ssl=false"
+            )
+        )
+    }
+
+    if (project.hasProperty("remoteDebug")) {
+        val remoteDebugPort = project.property("remoteDebug").toString().trim()
+        val suspend = if (project.hasProperty("remoteDebugSuspend") && project.property("remoteDebugSuspend").toString().toBoolean()) "y" else "n"
+        jvmArgs2.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=$suspend,address=*:$remoteDebugPort")
+    }
+
+//    println("The JVM args for the execution will be: ${jvmArgs2.joinToString(" ")}")
+
+    jvmArgs = jvmArgs2
+
+
+}
+
 tasks.test {
     testLogging.showExceptions = true
     useJUnitPlatform()
+    prepareJvmArgs()
 }
 
 dependencies {
@@ -40,9 +82,10 @@ dependencies {
 // child process that gradle runs for your application.
 // usage example: ./gradlew run -PjvmArgs="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=localhost:9999"
 tasks.getByName<JavaExec>("run") {
-    jvmArgs = if (project.hasProperty("jvmArgs"))
-        project.property("jvmArgs").toString().split("\\s+".toRegex())
-    else emptyList()
+    prepareJvmArgs()
+//    jvmArgs = if (project.hasProperty("jvmArgs"))
+//        project.property("jvmArgs").toString().split("\\s+".toRegex())
+//    else emptyList()
 }
 
 idea {
