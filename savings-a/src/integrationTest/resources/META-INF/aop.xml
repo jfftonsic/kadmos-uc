@@ -1,0 +1,18 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "https://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+<aspectj>
+
+    <weaver>
+        <!-- only weave classes in our application-specific packages -->
+        <include within="org.springframework.orm.jpa.JpaTransactionManager" />
+
+        <!-- YOU MUST INCLUDE HERE THE PLACES WHERE YOUR ASPECT CLASSES ARE IN -->
+        <include within="com.example..*"/>
+
+    </weaver>
+
+    <aspects>
+        <!-- weave in just this aspect -->
+        <aspect name="com.example.selfcall.TransactionAspect"/>
+    </aspects>
+
+</aspectj>

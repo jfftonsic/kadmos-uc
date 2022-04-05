@@ -76,11 +76,8 @@ class BalanceControllerTest {
         when(principal.getName()).thenReturn(PRINCIPAL_NAME);
 
         final var zonedDateTime = ZonedDateTime.now(clock);
-        when(balanceService.createUpdateReservation(
-                eq(IDEM_CODE),
-                eq(PRINCIPAL_NAME),
-                eq(zonedDateTime),
-                argThat(arg -> arg.compareTo(BigDecimal.TEN) == 0)
+        when(balanceService.reserve(
+                eq(IDEM_CODE)
         )).thenReturn(UPDATE_RESERVATION_CODE);
 
         var input = new BalanceController.UpdateReservationPostRequest(

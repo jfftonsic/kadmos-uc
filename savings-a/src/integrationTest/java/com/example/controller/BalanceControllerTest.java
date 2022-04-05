@@ -3,8 +3,6 @@ package com.example.controller;
 import com.example.UUIDGenerator;
 import com.example.business.api.IBalanceService;
 import com.example.util.FakeClockConfiguration;
-import static com.example.util.FakeClockConfiguration.FAKE_CLOCK;
-import static com.example.util.MockMvcUtil.VALID_USER;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilder;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithAdminRole;
 import static com.example.util.MockMvcUtil.getBalanceRequestBuilderWithValidUserWithUserRole;
@@ -33,7 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 // use this when you want a more complete spring context
@@ -117,11 +114,8 @@ class BalanceControllerTest {
         final var amount = TEN_DOUBLE;
         final var reservationCode = "res-code";
         when(
-                service.createUpdateReservation(
-                        eq(FAKE_IDEM_CODE),
-                        eq(VALID_USER),
-                        eq(ZonedDateTime.now(FAKE_CLOCK)),
-                        argThat(arg -> arg.compareTo(new BigDecimal(amount)) == 0)
+                service.reserve(
+                        eq(FAKE_IDEM_CODE)
                 )
         ).thenReturn(reservationCode);
         byte[] json = """
@@ -153,11 +147,8 @@ class BalanceControllerTest {
         UUID uuid = UUID.fromString(FAKE_UUID_STR);
         when(uuidGenerator.randomUUID()).thenReturn(uuid);
         when(
-                service.createUpdateReservation(
-                        eq(FAKE_UUID_STR),
-                        eq(VALID_USER),
-                        eq(ZonedDateTime.now(FAKE_CLOCK)),
-                        argThat(arg -> arg.compareTo(new BigDecimal(amount)) == 0)
+                service.reserve(
+                        eq(FAKE_UUID_STR)
                 )
         ).thenReturn(reservationCode);
 

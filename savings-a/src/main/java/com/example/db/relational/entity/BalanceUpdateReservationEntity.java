@@ -11,6 +11,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -42,7 +43,7 @@ public class BalanceUpdateReservationEntity {
             this.dbValue = dbValue;
         }
 
-        public BalanceUpdateReservationStatus fromDbValue(int fromDbValue) {
+        public static BalanceUpdateReservationStatus fromDbValue(int fromDbValue) {
             return Arrays.stream(values()).filter(x -> x.getDbValue() == fromDbValue).findAny().orElse(UNMAPPED);
         }
     }
@@ -68,6 +69,16 @@ public class BalanceUpdateReservationEntity {
 
     @Column(name = COL_AMOUNT, nullable = false)
     private BigDecimal amount;
+
+    @Transient
+    public BalanceUpdateReservationStatus getStatusEnum() {
+        return BalanceUpdateReservationStatus.fromDbValue(getStatus());
+    }
+
+    @Transient
+    public void setStatusEnum(BalanceUpdateReservationStatus st) {
+        setStatus(st.getDbValue());
+    }
 
     @Override
     public boolean equals(Object o) {

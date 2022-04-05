@@ -18,6 +18,10 @@ tasks.withType<Test> {
     testLogging.showStandardStreams = true
 }
 
+configurations {
+    create("runtimeAgent")
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -43,5 +47,17 @@ dependencies {
     // https://mvnrepository.com/artifact/it.unimi.dsi/dsiutils
     testImplementation("it.unimi.dsi:dsiutils:2.7.0")
 
+    "runtimeAgent"("org.springframework:spring-instrument")
+    "runtimeAgent"("org.aspectj:aspectjweaver")
+}
 
+tasks.withType<Test> {
+    doFirst {
+        // Ensure that all of the agents we need to load at run-time happen for tests
+        configurations.getByName("runtimeAgent").onEach {
+            val jvmMutableList = jvmArgs?.toMutableList()
+            jvmMutableList?.add("-javaagent:${it.absolutePath}")
+            jvmArgs = jvmMutableList?.toList()
+        }
+    }
 }

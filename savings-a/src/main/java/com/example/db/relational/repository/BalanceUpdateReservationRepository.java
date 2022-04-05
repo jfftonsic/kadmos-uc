@@ -19,4 +19,6 @@ public interface BalanceUpdateReservationRepository extends JpaRepository<Balanc
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(name="balanceUpdateReservation.findAndPessimisticWriteLockByReservationCode")
     Optional<BalanceUpdateReservationEntity> findAndPessimisticWriteLockByReservationCode(UUID reservationCode);
+
+    Optional<BalanceUpdateReservationEntity> findByReservationCode(UUID reservationCode);
 }

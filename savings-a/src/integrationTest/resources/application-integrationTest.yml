@@ -24,5 +24,7 @@ logging:
     org:
       testcontainers: INFO
     com:
+      example: DEBUG
       github:
         dockerjava: WARN
+

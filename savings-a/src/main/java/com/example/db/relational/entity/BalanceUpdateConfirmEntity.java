@@ -12,6 +12,8 @@ import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.NamedNativeQueries;
+import javax.persistence.NamedNativeQuery;
 import javax.persistence.Table;
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -20,6 +22,20 @@ import java.util.UUID;
 @Entity(name = BalanceUpdateConfirmEntity.ENTITY_NAME_BALANCE)
 @Table(name = BalanceUpdateConfirmEntity.TABLE_NAME_BALANCE)
 @Getter @Setter @RequiredArgsConstructor @SuperBuilder
+@NamedNativeQueries(
+        @NamedNativeQuery(
+                // This query is defined as a NamedQuery just as an example of using named queries
+                name = "existsDoneDoesNotNeedToBeSameNameAsMethod",
+                query = """
+                        SELECT CASE WHEN EXISTS (
+                            SELECT 1
+                            FROM balance_update_confirm
+                            WHERE 1 = 1
+                        ) THEN TRUE ELSE FALSE END
+                        """
+                        //"IF EXISTS (SELECT true FROM balanceUpdateConfirm c JOIN c.balanceUpdateReservationEntity b WHERE b.reservationCode = :reservationCode AND c.done IS TRUE LIMIT 1) SELECT 1 ELSE SELECT 0"
+        )
+)
 public class BalanceUpdateConfirmEntity {
 
     public static final String TABLE_NAME_BALANCE = "balance_update_confirm";

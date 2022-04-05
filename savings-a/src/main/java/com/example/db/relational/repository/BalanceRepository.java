@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface BalanceRepository extends PagingAndSortingRepository<BalanceEntity, UUID> {
@@ -22,7 +23,11 @@ public interface BalanceRepository extends PagingAndSortingRepository<BalanceEnt
 
     @Query(value = QUERY_GET_AMOUNT, nativeQuery = true)
     @Transactional(propagation = Propagation.SUPPORTS)
-    List<BigDecimal> getBalanceAmount();
+    Optional<BigDecimal> getBalanceAmount();
+
+    @Query(value = "select * from balance b limit 1 for update", nativeQuery = true)
+    @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)
+    Optional<BalanceEntity> getBalanceForUpdateNative();
 
     @Query(value = "select b from balance b")
     @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)

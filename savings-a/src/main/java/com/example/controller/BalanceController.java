@@ -79,11 +79,8 @@ public class BalanceController {
         try {
             return new UpdateReservationPostResponse(
                     ZonedDateTime.now(clock),
-                    new UpdateReservation(balanceService.createUpdateReservation(
-                            SafeUtil.safeIdempotencyCode(uuidGenerator, req.idempotency()),
-                            principal.getName(),
-                            SafeUtil.safeTimestamp(clock, req.timestamp()),
-                            req.amount()
+                    new UpdateReservation(balanceService.reserve(
+                            SafeUtil.safeIdempotencyCode(uuidGenerator, req.idempotency())
                     ))
             );
         } catch (NotEnoughBalanceException e) {

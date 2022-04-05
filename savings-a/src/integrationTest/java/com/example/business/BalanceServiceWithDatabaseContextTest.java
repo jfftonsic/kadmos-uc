@@ -17,9 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import javax.persistence.EntityManager;
-import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.ZonedDateTime;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -70,11 +68,8 @@ class BalanceServiceWithDatabaseContextTest {
         final var threadPool = Executors.newScheduledThreadPool(2);
         final Supplier<String> stringCallable = () -> {
             try {
-                return balanceService.createUpdateReservation(
-                        "test",
-                        "testActor",
-                        ZonedDateTime.now(clock),
-                        BigDecimal.TEN
+                return balanceService.reserve(
+                        "test"
                 );
             } catch (NotEnoughBalanceException e) {
                 log.error("Thread {}", Thread.currentThread().getId(), e);

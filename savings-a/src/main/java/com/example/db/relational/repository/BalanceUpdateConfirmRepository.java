@@ -8,16 +8,24 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface BalanceUpdateConfirmRepository extends JpaRepository<BalanceUpdateConfirmEntity, UUID> {
-    int TIMEOUT_MS = 5000;
+    int TIMEOUT_S = 5;
 
-    @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)
+    @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_S)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<BalanceUpdateConfirmEntity> findByBalanceUpdateReservationEntityId(UUID balanceUpdateReservationEntityId);
 
-    @Query(name="balanceUpdateConfirm.findWhatever")
-    Optional<BalanceUpdateConfirmEntity> findPessimisticBybalanceUpdateReservationEntityReservationCode(UUID reservationCode);
+    @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_S)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<BalanceUpdateConfirmEntity> findPessimisticByBalanceUpdateReservationEntityReservationCode(UUID reservationCode);
+
+    @Query(name="existsDoneDoesNotNeedToBeSameNameAsMethod")
+    boolean existsDone(UUID reservationCode); //@Param("reservationCode")
+
+    @Query(name="randomJPQLQuery", nativeQuery = true)
+    Optional<Boolean> couldBeWhicheverNameIWanted();
 }
