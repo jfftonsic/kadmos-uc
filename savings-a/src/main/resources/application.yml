@@ -9,6 +9,9 @@ management:
         include: '*'
 
 spring:
+  main:
+#    example if you want all the application beans to be lazily initialized by default
+    lazy-initialization: true
   jpa:
     generate-ddl: false
     open-in-view: false
@@ -46,6 +49,3 @@ logging:
         web:
           filter:
             CommonsRequestLoggingFilter: DEBUG
-
-#balanceUpdateReservation.findAndPessimisticWriteLockByReservationCode: "SELECT b FROM balanceUpdateReservation b WHERE b.reservationCode = :reservationCode"
-#balanceUpdateConfirm.findWhatever: "SELECT b, c FROM balanceUpdateReservation b, balanceUpdateConfirm c WHERE b.reservationCode = :reservationCode AND c.balanceUpdateReservationEntity.id = b.id"

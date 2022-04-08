@@ -27,7 +27,7 @@ public interface BalanceRepository extends PagingAndSortingRepository<BalanceEnt
 
     @Query(value = "select * from balance b limit 1 for update", nativeQuery = true)
     @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)
-    Optional<BalanceEntity> getBalanceForUpdateNative();
+    BalanceEntity getBalanceForUpdateNative();
 
     @Query(value = "select b from balance b")
     @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_MS)

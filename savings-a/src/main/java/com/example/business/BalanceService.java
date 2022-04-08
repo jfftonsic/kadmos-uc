@@ -60,18 +60,17 @@ public class BalanceService implements IBalanceService {
     )
     public String reserve(String reservationCode) throws NotEnoughBalanceException {
 
-        log.info("balanceUpdateReservationRepository.findAndPessimisticWriteLockByReservationCode idemCode={}...",
+        log.info("balanceUpdateReservationRepository.findAndLockByReservationCode idemCode={}...",
                 reservationCode);
         final var balanceUpdateReservationEntityOpt = balanceUpdateReservationRepository
-                .findAndPessimisticWriteLockByReservationCode(UUID.fromString(reservationCode));
+                .findAndLockByReservationCode(UUID.fromString(reservationCode));
         final var balanceUpdateReservationEntity = balanceUpdateReservationEntityOpt.orElseThrow(() -> new IllegalArgumentException(
                 "Balance update reservation not found. reservationCode=%s".formatted(reservationCode)));
 
         final var amount = balanceUpdateReservationEntity.getAmount();
         if (amount.signum() < 0) {
             log.info("balanceRepository.getBalanceForUpdate idemCode={}", reservationCode);
-            final var balanceAmountForUpdate = getExactlyOne(
-                    balanceRepository.getBalanceForUpdateNative(), "balance");
+            final var balanceAmountForUpdate = balanceRepository.getBalanceForUpdateNative();
 
             if (validateIfEnoughBalance(amount, balanceAmountForUpdate)) {
 
@@ -106,8 +105,8 @@ public class BalanceService implements IBalanceService {
     private boolean validateIfEnoughBalance(BigDecimal amount, BalanceEntity balanceAmountForUpdate) {
         return balanceAmountForUpdate.getTotalAmount()
                 .subtract(balanceAmountForUpdate.getOnHoldAmount())
-                .subtract(amount)
-                .signum() < 0;
+                .add(amount)
+                .signum() >= 0;
     }
 
     static class CollidingIdempotencyException extends Exception {

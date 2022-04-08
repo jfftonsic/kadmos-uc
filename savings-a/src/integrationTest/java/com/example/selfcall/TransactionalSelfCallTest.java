@@ -27,6 +27,11 @@ class Config {
     public TransactionalSelfCallService transactionalSelfCallService(ApplicationContext applicationContext) {
         return new TransactionalSelfCallService(applicationContext);
     }
+
+    @Bean
+    public TransactionalSelfCallService2 transactionalSelfCallService2(ApplicationContext applicationContext) {
+        return new TransactionalSelfCallService2();
+    }
 }
 
 
@@ -47,6 +52,9 @@ public class TransactionalSelfCallTest {
     @Autowired
     public TransactionalSelfCallService service;
 
+    @Autowired
+    public TransactionalSelfCallService2 service2;
+
     TransactionAspect transactionAspect;
 
     @Test
@@ -64,7 +72,6 @@ public class TransactionalSelfCallTest {
 
         checkTransactionalCall(transactionEvents, 0, "doBegin", "directCall");
         checkTransactionalCall(transactionEvents, 1, "doCommit", "directCall");
-
     }
 
     @Test
@@ -92,6 +99,45 @@ public class TransactionalSelfCallTest {
             """)
     public void selfApplicationContextCall() {
         service.selfApplicationContextCall();
+
+        final var transactionEvents = transactionAspect.getSequentialCallsByThread()
+                .get(Thread.currentThread().getId());
+        assertNotNull(transactionEvents);
+        assertEquals(4, transactionEvents.size());
+
+        checkTransactionalCall(transactionEvents, 0, "doBegin", "selfApplicationContextCall");
+        checkTransactionalCall(transactionEvents, 1, "doBegin", "nestedTransaction");
+        checkTransactionalCall(transactionEvents, 2, "doCommit", "nestedTransaction");
+        checkTransactionalCall(transactionEvents, 3, "doCommit", "selfApplicationContextCall");
+
+    }
+
+    @Test
+    @DisplayName("""
+            Second implementation of self reference interface.
+            Calling a method from the same class directly bypasses Spring AOP proxy, an thus, doesn't genereta a new
+            transaction when calling the 'nestedTransaction' method.
+            """)
+    public void directCall2() {
+        service2.directCall();
+
+        final var transactionEvents = transactionAspect.getSequentialCallsByThread()
+                .get(Thread.currentThread().getId());
+        assertNotNull(transactionEvents);
+        assertEquals(2, transactionEvents.size());
+
+        checkTransactionalCall(transactionEvents, 0, "doBegin", "directCall");
+        checkTransactionalCall(transactionEvents, 1, "doCommit", "directCall");
+    }
+
+    @Test
+    @DisplayName("""
+            Second implementation of self reference interface.
+            Self reference by getting the bean from spring's context. Here, the requires new of the nested transaction
+            works, because spring returns for you the proxy instance and not your real 'this'.
+            """)
+    public void selfApplicationContextCall2() {
+        service2.selfApplicationContextCall();
 
         final var transactionEvents = transactionAspect.getSequentialCallsByThread()
                 .get(Thread.currentThread().getId());

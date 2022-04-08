@@ -29,8 +29,11 @@ import java.util.UUID;
                 query = """
                         SELECT CASE WHEN EXISTS (
                             SELECT 1
-                            FROM balance_update_confirm
-                            WHERE 1 = 1
+                            FROM balance_update_confirm buc
+                            JOIN balance_update_reservation bur ON bur.id = buc.balance_update_reservation_id
+                            WHERE 1=1
+                                AND bur.reservation_code = :reservationCode
+                                AND buc.done = true
                         ) THEN TRUE ELSE FALSE END
                         """
                         //"IF EXISTS (SELECT true FROM balanceUpdateConfirm c JOIN c.balanceUpdateReservationEntity b WHERE b.reservationCode = :reservationCode AND c.done IS TRUE LIMIT 1) SELECT 1 ELSE SELECT 0"

@@ -17,15 +17,21 @@ public interface BalanceUpdateConfirmRepository extends JpaRepository<BalanceUpd
 
     @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_S)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<BalanceUpdateConfirmEntity> findByBalanceUpdateReservationEntityId(UUID balanceUpdateReservationEntityId);
+    // one reservation can have multiple rows of confirmation
+    List<BalanceUpdateConfirmEntity> findByBalanceUpdateReservationEntityId(UUID balanceUpdateReservationEntityId);
 
     @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_S)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    List<BalanceUpdateConfirmEntity> findPessimisticByBalanceUpdateReservationEntityReservationCode(UUID reservationCode);
+    Optional<BalanceUpdateConfirmEntity> findAndLockById(UUID id);
+
+    @Transactional(propagation = Propagation.REQUIRED, timeout = TIMEOUT_S)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<BalanceUpdateConfirmEntity> findAndLockByBalanceUpdateReservationEntityReservationCode(UUID reservationCode);
 
     @Query(name="existsDoneDoesNotNeedToBeSameNameAsMethod")
     boolean existsDone(UUID reservationCode); //@Param("reservationCode")
 
+    /** This is an example of a named query that is defined at jpa-named-queries.properties */
     @Query(name="randomJPQLQuery", nativeQuery = true)
     Optional<Boolean> couldBeWhicheverNameIWanted();
 }

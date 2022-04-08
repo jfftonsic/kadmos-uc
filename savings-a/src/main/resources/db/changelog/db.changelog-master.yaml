@@ -40,12 +40,12 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: idem_code
-                  type: character(36)
+                  type: character varying(36)
                   constraints:
                     nullable: false
               - column:
                   name: idem_actor
-                  type: character(36)
+                  type: character varying(36)
                   constraints:
                     nullable: false
               - column:
