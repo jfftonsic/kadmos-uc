@@ -19,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -35,9 +33,6 @@ public class BalanceService implements IBalanceService {
     final BalanceRepository balanceRepository;
     final BalanceUpdateReservationRepository balanceUpdateReservationRepository;
     final UpdateReservationInitService updateReservationInitService;
-
-    @PersistenceContext
-    final EntityManager entityManager;
 
     @Override
     public BigDecimal fetchAmount() {

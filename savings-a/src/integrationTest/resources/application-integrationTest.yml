@@ -3,6 +3,8 @@ server:
 
 spring:
   datasource:
+    hikari:
+      auto-commit: false
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     url: jdbc:tc:postgresql:///
     username: postgres

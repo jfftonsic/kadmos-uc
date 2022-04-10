@@ -18,13 +18,13 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 
-@Entity(name = BalanceUpdateReservationEntity.ENTITY_NAME_BALANCE)
-@Table(name = BalanceUpdateReservationEntity.TABLE_NAME_BALANCE)
+@Entity(name = BalanceUpdateReservationEntity.ENTITY_NAME_BALANCE_UPDATE_RESERVATION)
+@Table(name = BalanceUpdateReservationEntity.TABLE_NAME_BALANCE_UPDATE_RESERVATION)
 @Getter @Setter @ToString @RequiredArgsConstructor @SuperBuilder
 public class BalanceUpdateReservationEntity {
 
-    public static final String TABLE_NAME_BALANCE = "balance_update_reservation";
-    public static final String ENTITY_NAME_BALANCE = "balanceUpdateReservation";
+    public static final String TABLE_NAME_BALANCE_UPDATE_RESERVATION = "balance_update_reservation";
+    public static final String ENTITY_NAME_BALANCE_UPDATE_RESERVATION = "balanceUpdateReservation";
     private static final String COL_ID = "id";
     private static final String COL_IDEM_CODE = "idem_code";
     private static final String COL_IDEM_ACTOR = "idem_actor";
