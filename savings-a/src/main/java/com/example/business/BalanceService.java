@@ -41,8 +41,11 @@ public class BalanceService implements IBalanceService {
 
     @Override
     public void addFunds(BigDecimal amount) {
-        if (balanceRepository.addFunds(amount) != 1) {
+        final var updates = balanceRepository.addFunds(amount);
+        if (updates < 1) {
             throw new IllegalStateException("No row was updated while adding funds.");
+        } else if (updates > 1) {
+            throw new IllegalStateException("More than 1 row were updated while adding funds.");
         }
     }
 
@@ -59,8 +62,11 @@ public class BalanceService implements IBalanceService {
                 reservationCode);
         final var balanceUpdateReservationEntityOpt = balanceUpdateReservationRepository
                 .findAndLockByReservationCode(UUID.fromString(reservationCode));
-        final var balanceUpdateReservationEntity = balanceUpdateReservationEntityOpt.orElseThrow(() -> new IllegalArgumentException(
-                "Balance update reservation not found. reservationCode=%s".formatted(reservationCode)));
+        final var balanceUpdateReservationEntity = balanceUpdateReservationEntityOpt.orElseThrow(
+                () -> new IllegalArgumentException(
+                        "Balance update reservation not found. reservationCode=%s".formatted(reservationCode)
+                )
+        );
 
         final var amount = balanceUpdateReservationEntity.getAmount();
         if (amount.signum() < 0) {

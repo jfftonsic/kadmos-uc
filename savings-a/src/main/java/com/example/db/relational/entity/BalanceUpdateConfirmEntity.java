@@ -36,7 +36,6 @@ import java.util.UUID;
                                 AND buc.done = true
                         ) THEN TRUE ELSE FALSE END
                         """
-                        //"IF EXISTS (SELECT true FROM balanceUpdateConfirm c JOIN c.balanceUpdateReservationEntity b WHERE b.reservationCode = :reservationCode AND c.done IS TRUE LIMIT 1) SELECT 1 ELSE SELECT 0"
         )
 )
 public class BalanceUpdateConfirmEntity {

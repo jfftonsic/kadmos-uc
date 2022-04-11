@@ -17,6 +17,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import javax.persistence.EntityManager;
 import java.util.function.Supplier;
 
+/**
+ * This is one example of a more low-level, manual way to control transactions.
+ */
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
