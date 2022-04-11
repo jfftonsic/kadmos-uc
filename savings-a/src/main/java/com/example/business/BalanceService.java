@@ -70,7 +70,7 @@ public class BalanceService implements IBalanceService {
             if (validateIfEnoughBalance(amount, balanceAmountForUpdate)) {
 
                 final var onHoldAmount = balanceAmountForUpdate.getOnHoldAmount();
-                final var newOnHoldAmount = onHoldAmount.add(amount);
+                final var newOnHoldAmount = onHoldAmount.add(amount.abs());
 
                 log.info("idemCode={} replacing on-hold from {} to {} and saving balanceAmountForUpdate...",
                         onHoldAmount, newOnHoldAmount, reservationCode);

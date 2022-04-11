@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,9 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Slf4j
-public class UpdateReservationConfirmationService {//implements SelfReferential<UpdateReservationConfirmationService> {
-
-    final ApplicationContext context;
+public class UpdateReservationConfirmationService {
 
     final BalanceRepository balanceRepository;
     final BalanceUpdateReservationRepository balanceUpdateReservationRepository;
