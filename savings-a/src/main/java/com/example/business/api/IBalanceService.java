@@ -20,6 +20,5 @@ public interface IBalanceService {
             throws NotEnoughBalanceException;
 
     enum ConfirmUpdateReservationResponse { NO_CHANGES, DONE, UPDATE_RESERVATION_NOT_FOUND, CONFIRMATION_NOT_FOUND }
-
-//    ConfirmUpdateReservationResponse confirmUpdateReservation(UUID updateReservationCode, ZonedDateTime requestTimestamp);
+    enum UndoUpdateReservationResponse { NO_CHANGES, DONE, WAS_ALREADY_CONFIRMED, RECEIVED_BUT_NOT_RESERVED, UPDATE_RESERVATION_NOT_FOUND, UNDO_NOT_FOUND }
 }

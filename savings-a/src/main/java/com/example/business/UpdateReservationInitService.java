@@ -2,8 +2,10 @@ package com.example.business;
 
 import com.example.db.relational.entity.BalanceUpdateConfirmEntity;
 import com.example.db.relational.entity.BalanceUpdateReservationEntity;
+import com.example.db.relational.entity.BalanceUpdateUndoEntity;
 import com.example.db.relational.repository.BalanceUpdateConfirmRepository;
 import com.example.db.relational.repository.BalanceUpdateReservationRepository;
+import com.example.db.relational.repository.BalanceUpdateUndoRepository;
 import com.example.util.SelfReferential2;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -30,8 +32,9 @@ public class UpdateReservationInitService implements SelfReferential2<UpdateRese
     @Getter @Setter
     UpdateReservationInitService self;
 
-    final BalanceUpdateReservationRepository balanceUpdateReservationRepository;
-    final BalanceUpdateConfirmRepository balanceUpdateConfirmRepository;
+    final BalanceUpdateReservationRepository updateReservationRepository;
+    final BalanceUpdateConfirmRepository confirmRepository;
+    final BalanceUpdateUndoRepository undoRepository;
 
     /**
      * Creates and commits an initial record of the update reservation. Block calls incoming from methods that have open
@@ -56,7 +59,7 @@ public class UpdateReservationInitService implements SelfReferential2<UpdateRese
                 .build();
 
         log.info("idemCode={} idemActor={} reservationCode={} a=SavingBalanceUpdateReservationEntity", idemCode, idemActor, reservationCode);
-        balanceUpdateReservationRepository.save(balanceUpdateReservationEntity);
+        updateReservationRepository.save(balanceUpdateReservationEntity);
 
         return reservationCode;
     }
@@ -78,8 +81,8 @@ public class UpdateReservationInitService implements SelfReferential2<UpdateRese
                 .requestTimestamp(requestTimestamp)
                 .done(false)
                 .build();
-        log.info("reservationCode={} a=SavingBalanceUpdateReservationEntity", updateReservation.getReservationCode());
-        balanceUpdateConfirmRepository.save(confirmation);
+        log.info("reservationCode={} a=SavingBalanceUpdateConfirmEntity", updateReservation.getReservationCode());
+        confirmRepository.save(confirmation);
         return confirmation.getId();
     }
 
@@ -90,7 +93,7 @@ public class UpdateReservationInitService implements SelfReferential2<UpdateRese
     public UUID initConfirmation(UUID updateReservationCode, ZonedDateTime requestTimestamp)
             throws ConfirmUnknownReservationException {
 
-        final var reservation = balanceUpdateReservationRepository.findByReservationCode(updateReservationCode);
+        final var reservation = updateReservationRepository.findByReservationCode(updateReservationCode);
         if (reservation.isPresent()) {
             return self.initConfirmation(reservation.get(), requestTimestamp);
         }
@@ -98,6 +101,42 @@ public class UpdateReservationInitService implements SelfReferential2<UpdateRese
         throw new ConfirmUnknownReservationException(updateReservationCode);
     }
 
+    /**
+     * Creates and commits an initial record of the entity. Block calls incoming from methods that have open
+     * transactions to not give the idea that the insert will be reverted if the transaction gets rolled back.
+     *
+     * The purpose is to record the reception of an update reservation undo, and for it to exist on database even if some
+     * error happens later in the flow.
+     */
+    @Transactional(
+            propagation = Propagation.NEVER
+    )
+    @Nonnull
+    public UUID initUndo(BalanceUpdateReservationEntity updateReservation, ZonedDateTime requestTimestamp) {
+        final var undo = BalanceUpdateUndoEntity.builder()
+                .balanceUpdateReservationEntity(updateReservation)
+                .requestTimestamp(requestTimestamp)
+                .done(false)
+                .build();
+        log.info("reservationCode={} a=SavingBalanceUpdateUndoEntity", updateReservation.getReservationCode());
+        undoRepository.save(undo);
+        return undo.getId();
+    }
+
+    @Transactional(
+            propagation = Propagation.NEVER
+    )
+    @Nonnull
+    public UUID initUndo(UUID updateReservationCode, ZonedDateTime requestTimestamp)
+            throws UndoUnknownReservationException {
+
+        final var reservation = updateReservationRepository.findByReservationCode(updateReservationCode);
+        if (reservation.isPresent()) {
+            return self.initUndo(reservation.get(), requestTimestamp);
+        }
+
+        throw new UndoUnknownReservationException(updateReservationCode);
+    }
 
     @Getter
     @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -109,5 +148,13 @@ public class UpdateReservationInitService implements SelfReferential2<UpdateRese
         }
     }
 
+    @Getter
+    @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+    public static class UndoUnknownReservationException extends Exception {
+        UUID reservationCode;
 
+        public UndoUnknownReservationException(UUID reservationCode) {
+            this.reservationCode = reservationCode;
+        }
+    }
 }
