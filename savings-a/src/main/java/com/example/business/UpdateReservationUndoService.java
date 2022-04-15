@@ -69,7 +69,7 @@ public class UpdateReservationUndoService {
         }
         var reservation = reservationOpt.get();
 
-        UndoUpdateReservationResponse validationIssueOrNull = validateStateChange(reservation);
+        UndoUpdateReservationResponse validationIssueOrNull = validateStatusChange(reservation);
         if (validationIssueOrNull != null)
             return validationIssueOrNull;
         // END - Reservation not locked yet
@@ -81,7 +81,7 @@ public class UpdateReservationUndoService {
             throw new IllegalStateException("A previously found reservation (%s) disappeared from the database!".formatted(reservationCode));
         }
         reservation = reservationOpt.get();
-        validationIssueOrNull = validateStateChange(reservation);
+        validationIssueOrNull = validateStatusChange(reservation);
         if (validationIssueOrNull != null) {
             log.info("a=UndoStateChangeBecameInvalidConcurrently reservation={}", reservationCode);
             return validationIssueOrNull;
@@ -112,7 +112,7 @@ public class UpdateReservationUndoService {
 
     }
 
-    private UndoUpdateReservationResponse validateStateChange(BalanceUpdateReservationEntity reservation) {
+    private UndoUpdateReservationResponse validateStatusChange(BalanceUpdateReservationEntity reservation) {
         if (!stateMachineService.isStatusChangeValid(reservation.getStatusEnum(),
                 BalanceUpdateReservationStatus.CANCELED)) {
             return switch (reservation.getStatusEnum()) {

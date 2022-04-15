@@ -19,6 +19,6 @@ public interface IBalanceService {
     String reserve(String reservationCode)
             throws NotEnoughBalanceException;
 
-    enum ConfirmUpdateReservationResponse { NO_CHANGES, DONE, UPDATE_RESERVATION_NOT_FOUND, CONFIRMATION_NOT_FOUND }
+    enum ConfirmUpdateReservationResponse { NO_CHANGES, DONE, WAS_INVALID, WAS_ALREADY_CANCELED, RECEIVED_BUT_NOT_RESERVED, UPDATE_RESERVATION_NOT_FOUND, CONFIRMATION_NOT_FOUND }
     enum UndoUpdateReservationResponse { NO_CHANGES, DONE, WAS_ALREADY_CONFIRMED, RECEIVED_BUT_NOT_RESERVED, UPDATE_RESERVATION_NOT_FOUND, UNDO_NOT_FOUND }
 }

@@ -28,6 +28,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
+/**
+ * DISCLAIMER: I'm trying to mostly implement things that
+ * - are integral part of a functionality or service
+ * - or I think will result in me learning something
+ * - or that I may want to go back to in the future as an example
+ * - or if I want to exercise something
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class UpdateReservationUndoServiceTest {

@@ -1,11 +1,13 @@
 package com.example.business;
 
 import com.example.business.api.IBalanceService.ConfirmUpdateReservationResponse;
+import com.example.business.api.IBalanceService.UndoUpdateReservationResponse;
 import com.example.db.relational.entity.BalanceUpdateReservationEntity;
 import static com.example.db.relational.entity.BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.BUSINESS_RULE_VIOLATION;
 import com.example.db.relational.repository.BalanceRepository;
 import com.example.db.relational.repository.BalanceUpdateConfirmRepository;
 import com.example.db.relational.repository.BalanceUpdateReservationRepository;
+import com.example.db.relational.repository.BalanceUpdateUndoRepository;
 import com.example.exception.service.NotEnoughBalanceException;
 import com.example.util.CustomChecking;
 import static com.example.util.CustomChecking.check;
@@ -45,11 +47,11 @@ import java.util.UUID;
  * up reimplementing functionality similar to the actual implementation, or it will be different and if there are
  * modifications on steps performed before confirmation you'll need to replicate them to the preparation you did
  * (increasing maintenance costs).
- *
- * There are also a (possibly big) quantity of use cases that could be tested here and are not, for example:
- * - 2 debit reservations (without confirming) to check if the on hold amounts get added.
- * - make a $10 credit reservation, don't confirm, try to make a $5 debit reservation. It should fail.
- * - perform different kinds of operations concurrently and see to the consistency.
+ * <p>
+ * There are also a (possibly big) quantity of use cases that could be tested here and are not, for example: - 2 debit
+ * reservations (without confirming) to check if the on hold amounts get added. - make a $10 credit reservation, don't
+ * confirm, try to make a $5 debit reservation. It should fail. - perform different kinds of operations concurrently and
+ * see to the consistency.
  */
 // when a test fails, and you want more information, use "verboseDatabaseLogs" profile
 // or else, use "nonVerboseDatabaseLogs"
@@ -58,6 +60,8 @@ import java.util.UUID;
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = BalanceService.class),
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = UpdateReservationInitService.class),
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = UpdateReservationConfirmationService.class),
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = UpdateReservationUndoService.class),
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = ReservationStateMachineService.class),
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(FakeClockConfiguration.class)
@@ -65,7 +69,6 @@ import java.util.UUID;
 public class ReservationFunctionalityTest {
 
     public static final String IDEM_CODE_1 = "idemcode1";
-    public static final String IDEM_CODE_2 = "idemcode2";
     public static final String IDEM_ACTOR_1 = "idemactor1";
     public static final BigDecimal AMOUNT_DEBIT_20 = BigDecimal.valueOf(-20L);
 
@@ -73,10 +76,13 @@ public class ReservationFunctionalityTest {
     BalanceRepository balanceRepository;
 
     @Autowired
-    BalanceUpdateReservationRepository balanceUpdateReservationRepository;
+    BalanceUpdateReservationRepository reservationRepository;
 
     @Autowired
-    BalanceUpdateConfirmRepository balanceUpdateConfirmRepository;
+    BalanceUpdateConfirmRepository confirmRepository;
+
+    @Autowired
+    BalanceUpdateUndoRepository undoRepository;
 
     @Autowired
     UpdateReservationInitService updateReservationInitService;
@@ -86,6 +92,9 @@ public class ReservationFunctionalityTest {
 
     @Autowired
     UpdateReservationConfirmationService updateReservationConfirmationService;
+
+    @Autowired
+    UpdateReservationUndoService updateReservationUndoService;
 
     @Autowired
     Clock clock;
@@ -103,8 +112,9 @@ public class ReservationFunctionalityTest {
     public void afterEach() {
         final var updateCount = balanceRepository.resetBalance();
         log.info("afterEach updateCount={}", updateCount);
-        balanceUpdateConfirmRepository.deleteAll();
-        balanceUpdateReservationRepository.deleteAll();
+        confirmRepository.deleteAll();
+        undoRepository.deleteAll();
+        reservationRepository.deleteAll();
     }
 
     @Test
@@ -164,7 +174,7 @@ public class ReservationFunctionalityTest {
                 true, null);
         checkAmounts(100L, 0L);
 
-        reservationCode = initAndReserve(IDEM_CODE_2, IDEM_ACTOR_1, BigDecimal.valueOf(-60L), fakeNow);
+        reservationCode = initAndReserve("idemCode2", IDEM_ACTOR_1, BigDecimal.valueOf(-60L), fakeNow);
         checkAmounts(100L, 60L);
         confirmId = initConfirm(reservationCode, null);
         checkAmounts(100L, 60L);
@@ -178,6 +188,68 @@ public class ReservationFunctionalityTest {
         assertThrowsExactly(NotEnoughBalanceException.class,
                 () -> initAndReserve("idemCode3", IDEM_ACTOR_1, BigDecimal.valueOf(-60L), fakeNow));
 
+        var undoId = initUndo(reservationCode, null);
+        undo(UUID.fromString("5d835a9b-0045-43e0-bbd0-fbdaa5d309a9"),
+                undoId,
+                UndoUpdateReservationResponse.UPDATE_RESERVATION_NOT_FOUND,
+                false,
+                false,
+                true,
+                null);
+        checkAmounts(40L, 0L);
+
+        undo(reservationCode,
+                UUID.fromString("5d835a9b-0045-43e0-bbd0-fbdaa5d309a9"),
+                UndoUpdateReservationResponse.UNDO_NOT_FOUND,
+                false,
+                true,
+                false,
+                null);
+        checkAmounts(40L, 0L);
+
+        undo(reservationCode,
+                undoId,
+                UndoUpdateReservationResponse.WAS_ALREADY_CONFIRMED,
+                false,
+                true,
+                true,
+                null);
+        checkAmounts(40L, 0L);
+
+        // make a credit reservation to undo successfully
+        reservationCode = initAndReserve("idemCode4", IDEM_ACTOR_1, BigDecimal.valueOf(10), fakeNow);
+        undoId = initUndo(reservationCode, null);
+        undo(reservationCode,
+                undoId,
+                UndoUpdateReservationResponse.DONE,
+                true,
+                true,
+                true,
+                null);
+        checkAmounts(40L, 0L);
+
+        // make a debit reservation to undo successfully
+        reservationCode = initAndReserve("idemCode5", IDEM_ACTOR_1, BigDecimal.valueOf(-10), fakeNow);
+        checkAmounts(40L, 10L);
+        undoId = initUndo(reservationCode, null);
+        undo(reservationCode,
+                undoId,
+                UndoUpdateReservationResponse.DONE,
+                true,
+                true,
+                true,
+                null);
+        checkAmounts(40L, 0L);
+
+        // re-send a already done undo
+        undo(reservationCode,
+                undoId,
+                UndoUpdateReservationResponse.NO_CHANGES,
+                true,
+                true,
+                true,
+                null);
+        checkAmounts(40L, 0L);
     }
 
     @Test
@@ -191,7 +263,7 @@ public class ReservationFunctionalityTest {
 
         assertThrowsExactly(NotEnoughBalanceException.class, () -> balanceService.reserve(reservationCode.toString()));
 
-        final var reservationOpt = balanceUpdateReservationRepository.findByReservationCode(reservationCode);
+        final var reservationOpt = reservationRepository.findByReservationCode(reservationCode);
         assertTrue(reservationOpt.isPresent());
         final var reservation = reservationOpt.get();
 
@@ -211,7 +283,7 @@ public class ReservationFunctionalityTest {
      * provide at least a minimum of guarantee that the database is on a state that we expect
      */
     private void checkCleanDatabase() {
-        assertEquals(0, balanceUpdateReservationRepository.count());
+        assertEquals(0, reservationRepository.count());
         check(BigDecimal.ZERO, balanceRepository.getBalanceAmount());
         check(BigDecimal.ZERO, balanceRepository.getBalanceOnHoldAmount());
     }
@@ -238,10 +310,32 @@ public class ReservationFunctionalityTest {
         return null;
     }
 
-    private ConfirmUpdateReservationResponse confirm(UUID reservationCode, UUID confirmationId,
+    private UUID initUndo(UUID reservationCode, Class<? extends Exception> expectedExceptionOrNull) {
+        try {
+            if (expectedExceptionOrNull != null) {
+                Assertions.assertThrowsExactly(expectedExceptionOrNull,
+                        () -> updateReservationInitService.initUndo(reservationCode, fakeNow));
+            } else {
+                var id = updateReservationInitService.initUndo(reservationCode, fakeNow);
+
+                validateUndo(reservationCode, id, false, true, true);
+                return id;
+            }
+        } catch (UpdateReservationInitService.UndoUnknownReservationException e) {
+            Assertions.fail(e);
+        }
+        return null;
+    }
+
+    private ConfirmUpdateReservationResponse confirm(
+            UUID reservationCode,
+            UUID confirmationId,
             ConfirmUpdateReservationResponse expectedResponse,
-            boolean expectedDone, boolean thisReservationShouldExist, boolean thisConfirmationShouldExist,
-            Class<? extends Exception> expectedExceptionOrNull) {
+            boolean expectedDone,
+            boolean thisReservationShouldExist,
+            boolean thisConfirmationShouldExist,
+            Class<? extends Exception> expectedExceptionOrNull
+    ) {
 
         if (expectedExceptionOrNull != null) {
             assertThrowsExactly(expectedExceptionOrNull,
@@ -265,10 +359,42 @@ public class ReservationFunctionalityTest {
         return null;
     }
 
+    private UndoUpdateReservationResponse undo(
+            UUID reservationCode,
+            UUID undoId,
+            UndoUpdateReservationResponse expectedResponse,
+            boolean expectedDone,
+            boolean thisReservationShouldExist,
+            boolean thisUndoShouldExist,
+            Class<? extends Exception> expectedExceptionOrNull
+    ) {
+
+        if (expectedExceptionOrNull != null) {
+            assertThrowsExactly(expectedExceptionOrNull,
+                    () -> updateReservationUndoService.undoUpdateReservation(reservationCode,
+                            undoId));
+        } else {
+            final var actualResponse = updateReservationUndoService.undoUpdateReservation(
+                    reservationCode,
+                    undoId);
+            assertEquals(expectedResponse, actualResponse);
+
+            validateUndo(reservationCode,
+                    undoId,
+                    expectedDone,
+                    thisReservationShouldExist,
+                    thisUndoShouldExist);
+
+            return actualResponse;
+        }
+
+        return null;
+    }
+
     private void validateConfirmation(UUID reservationCode, UUID confirmationId, boolean expectedDone,
             boolean thisReservationShouldExist, boolean thisConfirmationShouldExist) {
 
-        final var reservationOpt = balanceUpdateReservationRepository.findByReservationCode(reservationCode);
+        final var reservationOpt = reservationRepository.findByReservationCode(reservationCode);
         assertEquals(thisReservationShouldExist, reservationOpt.isPresent());
         reservationOpt.ifPresent(reservation -> {
             if (expectedDone) {
@@ -277,10 +403,26 @@ public class ReservationFunctionalityTest {
             }
         });
 
-        final var confirmOpt = balanceUpdateConfirmRepository.findById(confirmationId);
+        final var confirmOpt = confirmRepository.findById(confirmationId);
         assertEquals(thisConfirmationShouldExist, confirmOpt.isPresent());
         confirmOpt.ifPresent(confirm -> assertEquals(expectedDone, confirm.getDone()));
+    }
 
+    private void validateUndo(UUID reservationCode, UUID undoId, boolean expectedDone,
+            boolean thisReservationShouldExist, boolean thisUndoShouldExist) {
+
+        final var reservationOpt = reservationRepository.findByReservationCode(reservationCode);
+        assertEquals(thisReservationShouldExist, reservationOpt.isPresent());
+        reservationOpt.ifPresent(reservation -> {
+            if (expectedDone) {
+                assertEquals(BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.CANCELED,
+                        reservation.getStatusEnum());
+            }
+        });
+
+        final var undoOpt = undoRepository.findById(undoId);
+        assertEquals(thisUndoShouldExist, undoOpt.isPresent());
+        undoOpt.ifPresent(undo -> assertEquals(expectedDone, undo.getDone()));
     }
 
     @NotNull
@@ -313,7 +455,7 @@ public class ReservationFunctionalityTest {
 
     private void validateReservation(ZonedDateTime fakeNow, BigDecimal amount, String idemCode, String idemActor,
             UUID reservationCode, Integer status) {
-        final var reservationOpt = balanceUpdateReservationRepository.findByReservationCode(reservationCode);
+        final var reservationOpt = reservationRepository.findByReservationCode(reservationCode);
         assertTrue(reservationOpt.isPresent());
         final var reservation = reservationOpt.get();
         checkBalanceUpdateReservationEntity(
