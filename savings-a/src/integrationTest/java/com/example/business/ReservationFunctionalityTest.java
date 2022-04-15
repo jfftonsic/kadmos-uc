@@ -250,6 +250,10 @@ public class ReservationFunctionalityTest {
                 true,
                 null);
         checkAmounts(40L, 0L);
+
+        confirmId = initConfirm(reservationCode, null);
+        confirm(reservationCode, confirmId, ConfirmUpdateReservationResponse.WAS_ALREADY_CANCELED, false, true, true, null);
+        checkAmounts(40L, 0L);
     }
 
     @Test
