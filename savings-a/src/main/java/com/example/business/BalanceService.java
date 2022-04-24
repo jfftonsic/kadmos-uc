@@ -10,7 +10,6 @@ import static com.example.util.BoilerplateUtil.getExactlyOne;
 import com.example.util.GeneralConstants;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,19 +48,18 @@ public class BalanceService implements IBalanceService {
         }
     }
 
-    @SneakyThrows
     @Override
     @Transactional(
             timeout = GeneralConstants.TIMEOUT_S,
             isolation = Isolation.READ_COMMITTED,
             noRollbackFor = NotEnoughBalanceException.class
     )
-    public String reserve(String reservationCode) throws NotEnoughBalanceException {
+    public UUID reserve(UUID reservationCode) throws NotEnoughBalanceException {
 
-        log.info("balanceUpdateReservationRepository.findAndLockByReservationCode idemCode={}...",
+        log.info("balanceUpdateReservationRepository.findAndLockByReservationCode reservationCode={}...",
                 reservationCode);
         final var balanceUpdateReservationEntityOpt = balanceUpdateReservationRepository
-                .findAndLockByReservationCode(UUID.fromString(reservationCode));
+                .findAndLockByReservationCode(reservationCode);
         final var balanceUpdateReservationEntity = balanceUpdateReservationEntityOpt.orElseThrow(
                 () -> new IllegalArgumentException(
                         "Balance update reservation not found. reservationCode=%s".formatted(reservationCode)

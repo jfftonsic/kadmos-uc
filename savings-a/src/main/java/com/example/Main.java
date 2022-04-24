@@ -16,7 +16,8 @@ import java.time.Clock;
 @SpringBootApplication
 @SecurityScheme(name = "api-security-requirement", scheme = "basic", type = SecuritySchemeType.HTTP, in = SecuritySchemeIn.HEADER)
 @OpenAPIDefinition(info = @Info(title = "User API", version = "2.0", description = "User Details"))
-@EnableJpaRepositories(namedQueriesLocation = "META-INF/2jpa-named-queries.properties")
+// PS: when the app is a web app, you must put 'classpath:' or else it will not find the file.
+@EnableJpaRepositories(namedQueriesLocation = "classpath:META-INF/2jpa-named-queries.properties")
 public class Main {
 
     @Bean

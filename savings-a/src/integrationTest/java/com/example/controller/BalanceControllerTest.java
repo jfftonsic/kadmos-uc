@@ -112,10 +112,10 @@ class BalanceControllerTest {
     @Test
     void postUpdateReservation_success() throws Exception {
         final var amount = TEN_DOUBLE;
-        final var reservationCode = "res-code";
+        final var reservationCode = UUID.fromString("ec2aaf17-7106-445c-ae2c-93f72f24a2b4");
         when(
                 service.reserve(
-                        eq(FAKE_IDEM_CODE)
+                        eq(reservationCode)
                 )
         ).thenReturn(reservationCode);
         byte[] json = """
@@ -143,12 +143,12 @@ class BalanceControllerTest {
     @Test
     void postUpdateReservation_success_onlyRequiredFields() throws Exception {
         final var amount = TEN_DOUBLE;
-        final var reservationCode = "res-code";
+        final var reservationCode = UUID.fromString("ec2aaf17-7106-445c-ae2c-93f72f24a2b4");
         UUID uuid = UUID.fromString(FAKE_UUID_STR);
         when(uuidGenerator.randomUUID()).thenReturn(uuid);
         when(
                 service.reserve(
-                        eq(FAKE_UUID_STR)
+                        eq(reservationCode)
                 )
         ).thenReturn(reservationCode);
 

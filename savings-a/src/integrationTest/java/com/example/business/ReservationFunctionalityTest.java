@@ -55,7 +55,7 @@ import java.util.UUID;
  */
 // when a test fails, and you want more information, use "verboseDatabaseLogs" profile
 // or else, use "nonVerboseDatabaseLogs"
-@SuppressWarnings("ResultOfMethodCallIgnored") @ActiveProfiles({ "nonVerboseDatabaseLogs", "integrationTest" })
+@ActiveProfiles({ "nonVerboseDatabaseLogs", "integrationTest" })
 @DataJpaTest(includeFilters = {
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = BalanceService.class),
         @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = UpdateReservationInitService.class),
@@ -265,7 +265,7 @@ public class ReservationFunctionalityTest {
 
         final var reservationCode = initReservation(IDEM_CODE_1, IDEM_ACTOR_1, AMOUNT_DEBIT_20, fakeNow);
 
-        assertThrowsExactly(NotEnoughBalanceException.class, () -> balanceService.reserve(reservationCode.toString()));
+        assertThrowsExactly(NotEnoughBalanceException.class, () -> balanceService.reserve(reservationCode));
 
         final var reservationOpt = reservationRepository.findByReservationCode(reservationCode);
         assertTrue(reservationOpt.isPresent());
@@ -434,7 +434,7 @@ public class ReservationFunctionalityTest {
             throws NotEnoughBalanceException {
         final UUID reservationCode;
         reservationCode = initReservation(idemCode, idemActor, amount, fakeNow);
-        balanceService.reserve(reservationCode.toString());
+        balanceService.reserve(reservationCode);
         validateReservation(fakeNow, amount, idemCode, idemActor, reservationCode,
                 BalanceUpdateReservationEntity.BalanceUpdateReservationStatus.RESERVED.getDbValue());
         return reservationCode;
